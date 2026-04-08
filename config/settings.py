@@ -1,17 +1,26 @@
+import os
 from pathlib import Path
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-change-this-later"
-DEBUG = True
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    "tabeebak.onrender.com",
-]
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-this-later")
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS",
+    "127.0.0.1,localhost,tabeebak.onrender.com"
+).split(",")
+
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS",
+    "https://tabeebak.onrender.com"
+).split(",")
+
 INSTALLED_APPS = [
     "daphne",
     "channels",
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -29,6 +38,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -55,12 +66,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = []
@@ -70,22 +82,21 @@ TIME_ZONE = "Africa/Khartoum"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ✅ المستخدم المخصص
 AUTH_USER_MODEL = "accounts.User"
 
-# ✅ إعدادات تسجيل الدخول والخروج
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard_redirect"
 LOGOUT_REDIRECT_URL = "home"
-ASGI_APPLICATION = "config.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
