@@ -1,0 +1,526 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}حجز استشارة | طبيبك{% endblock %}
+
+{% block content %}
+
+<style>
+    :root{
+        --primary:#0F4C81;
+        --primary-dark:#0A355A;
+        --secondary:#14B8A6;
+        --bg:#F8FAFC;
+        --bg-soft:#F1F7FB;
+        --text:#1E293B;
+        --muted:#64748B;
+        --border:#E2E8F0;
+        --white:#FFFFFF;
+        --shadow:0 18px 40px rgba(15,76,129,.08);
+        --shadow-soft:0 10px 25px rgba(15,76,129,.05);
+    }
+
+    body{
+        font-family:'Cairo',sans-serif;
+        background:var(--bg);
+        color:var(--text);
+    }
+
+    .booking-section{
+        padding:120px 0 80px;
+        background:
+            radial-gradient(circle at top right, rgba(20,184,166,.12), transparent 24%),
+            radial-gradient(circle at left center, rgba(15,76,129,.10), transparent 18%),
+            linear-gradient(180deg,#ffffff 0%, #f8fbfd 100%);
+        min-height:100vh;
+    }
+
+    .crumbs{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        flex-wrap:wrap;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:18px;
+    }
+
+    .crumbs a{
+        color:var(--primary);
+        text-decoration:none;
+    }
+
+    .booking-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:30px;
+        padding:30px;
+        box-shadow:var(--shadow);
+    }
+
+    .page-title{
+        font-size:2rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:8px;
+    }
+
+    .page-subtitle{
+        color:var(--muted);
+        line-height:1.9;
+        margin-bottom:24px;
+    }
+
+    .doctor-box{
+        display:flex;
+        align-items:center;
+        gap:16px;
+        padding:18px;
+        background:var(--bg-soft);
+        border:1px solid rgba(15,76,129,.06);
+        border-radius:24px;
+        margin-bottom:24px;
+    }
+
+    .doctor-avatar{
+        width:84px;
+        height:84px;
+        border-radius:22px;
+        background:linear-gradient(135deg,#DBEAFE,#CCFBF1);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:var(--primary);
+        font-size:2rem;
+        overflow:hidden;
+        flex-shrink:0;
+    }
+
+    .doctor-avatar img{
+        width:100%;
+        height:100%;
+        object-fit:cover;
+    }
+
+    .doctor-name{
+        font-size:1.2rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:4px;
+    }
+
+    .doctor-meta{
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:8px;
+    }
+
+    .doctor-badges{
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+    }
+
+    .doctor-badge{
+        background:rgba(15,76,129,.08);
+        color:var(--primary);
+        border-radius:999px;
+        padding:8px 12px;
+        font-size:.84rem;
+        font-weight:800;
+    }
+
+    .form-label{
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:8px;
+    }
+
+    .form-control,
+    .form-select,
+    textarea{
+        border-radius:16px;
+        border:1px solid var(--border);
+        min-height:52px;
+        box-shadow:none !important;
+        padding:12px 14px;
+    }
+
+    .form-control:focus,
+    .form-select:focus,
+    textarea:focus{
+        border-color:var(--secondary);
+    }
+
+    textarea.form-control{
+        min-height:auto;
+    }
+
+    .section-title-mini{
+        font-size:1.05rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin:24px 0 16px;
+    }
+
+    .info-note{
+        background:#fff;
+        border:1px dashed rgba(20,184,166,.45);
+        border-radius:20px;
+        padding:16px;
+        color:var(--muted);
+        line-height:1.9;
+        font-weight:700;
+        margin-top:20px;
+    }
+
+    .account-note{
+        background:linear-gradient(135deg, rgba(15,76,129,.06), rgba(20,184,166,.08));
+        border:1px solid rgba(20,184,166,.25);
+        border-radius:20px;
+        padding:16px;
+        color:var(--text);
+        line-height:1.9;
+        font-weight:700;
+        margin-bottom:20px;
+    }
+
+    .summary-box{
+        background:
+            radial-gradient(circle at top left, rgba(20,184,166,.12), transparent 35%),
+            linear-gradient(135deg,#ffffff 0%, #f4fbfb 100%);
+        border:1px solid var(--border);
+        border-radius:28px;
+        padding:24px;
+        box-shadow:var(--shadow-soft);
+        height:100%;
+    }
+
+    .summary-box h4{
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:18px;
+    }
+
+    .summary-item{
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        padding:12px 0;
+        border-bottom:1px solid rgba(226,232,240,.8);
+    }
+
+    .summary-item:last-child{
+        border-bottom:none;
+    }
+
+    .summary-item span{
+        color:var(--muted);
+        font-weight:700;
+    }
+
+    .summary-item strong{
+        color:var(--primary-dark);
+        font-weight:800;
+        text-align:left;
+    }
+
+    .btn-main{
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        border:none;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        box-shadow:0 12px 24px rgba(15,76,129,.18);
+        transition:.25s;
+        text-decoration:none;
+    }
+
+    .btn-main:hover{
+        color:#fff;
+        transform:translateY(-2px);
+    }
+
+    .btn-outline-main{
+        border:1.5px solid var(--primary);
+        color:var(--primary);
+        background:#fff;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        transition:.25s;
+        text-decoration:none;
+    }
+
+    .btn-outline-main:hover{
+        background:var(--primary);
+        color:#fff;
+    }
+
+    .action-buttons{
+        display:flex;
+        flex-wrap:wrap;
+        gap:12px;
+        margin-top:24px;
+    }
+
+    .error-list{
+        color:#dc2626;
+        font-size:.88rem;
+        margin-top:6px;
+        font-weight:700;
+    }
+
+    .alert-custom{
+        border-radius:18px;
+        padding:14px 16px;
+        margin-bottom:16px;
+        font-weight:700;
+    }
+
+    @media (max-width: 991.98px){
+        .summary-box{
+            margin-top:22px;
+        }
+    }
+
+    @media (max-width: 767.98px){
+        .booking-section{
+            padding-top:105px;
+        }
+
+        .doctor-box{
+            flex-direction:column;
+            align-items:flex-start;
+        }
+
+        .action-buttons{
+            flex-direction:column;
+        }
+
+        .action-buttons .btn-main,
+        .action-buttons .btn-outline-main{
+            width:100%;
+            text-align:center;
+        }
+
+        .summary-item{
+            flex-direction:column;
+        }
+
+        .summary-item strong{
+            text-align:right;
+        }
+    }
+</style>
+
+<section class="booking-section">
+    <div class="container">
+        <div class="crumbs">
+            <a href="{% url 'home' %}">الرئيسية</a>
+            <span>/</span>
+            <a href="{% url 'doctor_list' %}">الأطباء</a>
+            <span>/</span>
+            <a href="{% url 'doctor_detail' doctor.id %}">{{ doctor.name }}</a>
+            <span>/</span>
+            <span>حجز استشارة</span>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="booking-card">
+                    <h1 class="page-title">حجز استشارة جديدة</h1>
+                    <p class="page-subtitle">
+                        أكمل بيانات الحجز للطبيب المختار. سيتم ربط هذا الطلب بحسابك الحالي تلقائيًا.
+                    </p>
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-success alert-custom">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger alert-custom">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="doctor-box">
+                        <div class="doctor-avatar">
+                            {% if doctor.image %}
+                                <img src="{{ doctor.image.url }}" alt="{{ doctor.name }}">
+                            {% else %}
+                                <i class="bi bi-person"></i>
+                            {% endif %}
+                        </div>
+
+                        <div class="flex-grow-1">
+                            <div class="doctor-name">{{ doctor.name }}</div>
+                            <div class="doctor-meta">{{ doctor.specialization }}</div>
+
+                            <div class="doctor-badges">
+                                <span class="doctor-badge">⭐ {{ doctor.rating }}</span>
+                                <span class="doctor-badge">{{ doctor.experience_years }} سنوات خبرة</span>
+                                <span class="doctor-badge">سعر الاستشارة: {{ doctor.price }} ج.س</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if request.user.is_authenticated %}
+                        <div class="account-note">
+                            سيتم استخدام بيانات حسابك الحالية لهذا الحجز:
+                            <br>
+                            <strong>
+                                {{ request.user.first_name }} {{ request.user.last_name }}
+                            </strong>
+                            {% if request.user.phone %}
+                                - {{ request.user.phone }}
+                            {% endif %}
+                            {% if request.user.email %}
+                                - {{ request.user.email }}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {% if not request.user.is_authenticated %}
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">{{ form.full_name.label }}</label>
+                                    {{ form.full_name }}
+                                    {% if form.full_name.errors %}
+                                        <div class="error-list">{{ form.full_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">{{ form.phone.label }}</label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                        <div class="error-list">{{ form.phone.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label">{{ form.email.label }}</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="error-list">{{ form.email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div style="display:none;">
+                                {{ form.full_name }}
+                                {{ form.phone }}
+                                {{ form.email }}
+                            </div>
+                        {% endif %}
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.consultation_type.label }}</label>
+                                {{ form.consultation_type }}
+                                {% if form.consultation_type.errors %}
+                                    <div class="error-list">{{ form.consultation_type.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.appointment_date.label }}</label>
+                                {{ form.appointment_date }}
+                                {% if form.appointment_date.errors %}
+                                    <div class="error-list">{{ form.appointment_date.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.appointment_time.label }}</label>
+                                {{ form.appointment_time }}
+                                {% if form.appointment_time.errors %}
+                                    <div class="error-list">{{ form.appointment_time.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.gender.label }}</label>
+                                {{ form.gender }}
+                                {% if form.gender.errors %}
+                                    <div class="error-list">{{ form.gender.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="section-title-mini">تفاصيل الحالة</div>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                                {% if form.notes.errors %}
+                                    <div class="error-list">{{ form.notes.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.age.label }}</label>
+                                {{ form.age }}
+                                {% if form.age.errors %}
+                                    <div class="error-list">{{ form.age.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="info-note">
+                            يمكنك لاحقًا تطوير هذه الصفحة لرفع التحاليل والتقارير الطبية، وربطها بموعد فعلي داخل قاعدة البيانات.
+                        </div>
+
+                        <div class="action-buttons">
+                            <button type="submit" class="btn btn-main">تأكيد الحجز</button>
+                            <a href="{% url 'doctor_detail' doctor.id %}" class="btn btn-outline-main">العودة للطبيب</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="summary-box">
+                    <h4>ملخص الحجز</h4>
+
+                    <div class="summary-item">
+                        <span>الطبيب</span>
+                        <strong>{{ doctor.name }}</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>التخصص</span>
+                        <strong>{{ doctor.specialization }}</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>الخبرة</span>
+                        <strong>{{ doctor.experience_years }} سنوات</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>التقييم</span>
+                        <strong>{{ doctor.rating }} / 5</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>السعر</span>
+                        <strong>{{ doctor.price }} ج.س</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

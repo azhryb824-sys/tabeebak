@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="max-width:600px;margin:80px auto;background:#fff;padding:30px;border-radius:16px">
+
+    <h2 style="margin-bottom:20px;">⭐ تقييم الطبيب</h2>
+
+    <p>الدكتور: <b>{{ appointment.doctor }}</b></p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div style="margin-bottom:20px;">
+            <label>التقييم:</label><br>
+            {{ form.rating }}
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <label>تعليق:</label>
+            {{ form.comment }}
+        </div>
+
+        <button type="submit" style="padding:10px 20px;background:#0F4C81;color:white;border:none;border-radius:10px">
+            إرسال التقييم
+        </button>
+    </form>
+
+</div>
+
+{% endblock %}

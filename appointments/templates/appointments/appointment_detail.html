@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}تفاصيل الحجز | طبيبك{% endblock %}
+
+{% block content %}
+
+<style>
+    :root{
+        --primary:#0F4C81;
+        --primary-dark:#0A355A;
+        --secondary:#14B8A6;
+        --bg:#F8FAFC;
+        --text:#1E293B;
+        --muted:#64748B;
+        --border:#E2E8F0;
+        --shadow:0 18px 40px rgba(15,76,129,.08);
+        --success:#16A34A;
+        --warning:#F59E0B;
+        --danger:#DC2626;
+    }
+
+    body{
+        font-family:'Cairo',sans-serif;
+        background:var(--bg);
+        color:var(--text);
+    }
+
+    .detail-section{
+        padding:120px 0 80px;
+        min-height:100vh;
+        background:
+            radial-gradient(circle at top right, rgba(20,184,166,.12), transparent 24%),
+            radial-gradient(circle at left center, rgba(15,76,129,.10), transparent 18%),
+            linear-gradient(180deg,#ffffff 0%, #f8fbfd 100%);
+    }
+
+    .detail-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:30px;
+        padding:30px;
+        box-shadow:var(--shadow);
+    }
+
+    .title{
+        font-size:2rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:10px;
+    }
+
+    .subtitle{
+        color:var(--muted);
+        line-height:1.9;
+        margin-bottom:24px;
+    }
+
+    .notice-box{
+        border-radius:22px;
+        padding:18px;
+        font-weight:700;
+        line-height:1.9;
+        margin-bottom:20px;
+    }
+
+    .notice-pending{
+        background:rgba(245,158,11,.10);
+        border:1px solid rgba(245,158,11,.28);
+        color:#92400e;
+    }
+
+    .notice-confirmed{
+        background:rgba(22,163,74,.10);
+        border:1px solid rgba(22,163,74,.25);
+        color:#166534;
+    }
+
+    .notice-cancelled{
+        background:rgba(220,38,38,.08);
+        border:1px solid rgba(220,38,38,.20);
+        color:#991b1b;
+    }
+
+    .info-grid{
+        display:grid;
+        grid-template-columns:repeat(2, 1fr);
+        gap:16px;
+    }
+
+    .info-box{
+        background:#f8fbfd;
+        border:1px solid var(--border);
+        border-radius:22px;
+        padding:18px;
+    }
+
+    .info-box small{
+        display:block;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:6px;
+    }
+
+    .info-box strong{
+        color:var(--primary-dark);
+        font-weight:800;
+    }
+
+    .notes-box,
+    .upload-box,
+    .files-box{
+        margin-top:20px;
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:24px;
+        padding:20px;
+    }
+
+    .notes-box h4,
+    .upload-box h4,
+    .files-box h4{
+        font-size:1.15rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:12px;
+    }
+
+    .notes-box p{
+        color:var(--text);
+        line-height:2;
+        margin-bottom:0;
+        white-space:pre-line;
+    }
+
+    .status-badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:8px 14px;
+        border-radius:999px;
+        font-size:.84rem;
+        font-weight:800;
+    }
+
+    .status-pending{
+        background:rgba(245,158,11,.12);
+        color:var(--warning);
+    }
+
+    .status-confirmed{
+        background:rgba(22,163,74,.12);
+        color:var(--success);
+    }
+
+    .status-cancelled{
+        background:rgba(220,38,38,.10);
+        color:var(--danger);
+    }
+
+    .session-not-started{
+        background:rgba(100,116,139,.10);
+        color:#475569;
+    }
+
+    .session-in-progress{
+        background:rgba(15,76,129,.10);
+        color:var(--primary);
+    }
+
+    .session-completed{
+        background:rgba(22,163,74,.12);
+        color:var(--success);
+    }
+
+    .form-label{
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:8px;
+    }
+
+    .form-control{
+        border-radius:16px;
+        border:1px solid var(--border);
+        box-shadow:none !important;
+    }
+
+    .file-item{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        padding:14px 0;
+        border-bottom:1px solid rgba(226,232,240,.8);
+    }
+
+    .file-item:last-child{
+        border-bottom:none;
+    }
+
+    .file-meta{
+        display:flex;
+        flex-direction:column;
+        gap:4px;
+    }
+
+    .file-title{
+        color:var(--primary-dark);
+        font-weight:800;
+    }
+
+    .file-sub{
+        color:var(--muted);
+        font-size:.9rem;
+    }
+
+    .actions{
+        display:flex;
+        gap:12px;
+        flex-wrap:wrap;
+        margin-top:24px;
+    }
+
+    .btn-main{
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        border:none;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        text-decoration:none;
+    }
+
+    .btn-main:hover{
+        color:#fff;
+    }
+
+    .btn-outline-main{
+        border:1.5px solid var(--primary);
+        color:var(--primary);
+        background:#fff;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        text-decoration:none;
+    }
+
+    .btn-outline-main:hover{
+        background:var(--primary);
+        color:#fff;
+    }
+
+    @media (max-width: 767.98px){
+        .detail-section{
+            padding-top:105px;
+        }
+
+        .info-grid{
+            grid-template-columns:1fr;
+        }
+
+        .file-item{
+            flex-direction:column;
+            align-items:flex-start;
+        }
+
+        .actions{
+            flex-direction:column;
+        }
+
+        .actions a,
+        .actions button{
+            width:100%;
+            text-align:center;
+        }
+    }
+</style>
+
+<section class="detail-section">
+    <div class="container">
+        <div class="detail-card">
+            <h1 class="title">تفاصيل الحجز</h1>
+            <p class="subtitle">
+                هذه الصفحة تعرض تفاصيل طلب الحجز المرتبط بحسابك.
+            </p>
+
+            {% if appointment.status == "pending" %}
+                <div class="notice-box notice-pending">
+                    هذا الحجز ما زال <strong>قيد المراجعة</strong> من الطبيب، وسيتم تحديث حالته بمجرد اتخاذ القرار.
+                </div>
+            {% elif appointment.status == "confirmed" %}
+                <div class="notice-box notice-confirmed">
+                    تم <strong>تأكيد الحجز</strong> من الطبيب بنجاح. يرجى متابعة الموعد في التاريخ والوقت المحددين.
+                </div>
+            {% elif appointment.status == "cancelled" %}
+                <div class="notice-box notice-cancelled">
+                    تم <strong>إلغاء الحجز</strong>. يمكنك حجز موعد جديد مع نفس الطبيب أو اختيار طبيب آخر.
+                </div>
+            {% endif %}
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <small>الطبيب</small>
+                    <strong>{{ appointment.doctor.name }}</strong>
+                </div>
+
+                <div class="info-box">
+                    <small>التخصص</small>
+                    <strong>{{ appointment.doctor.specialization }}</strong>
+                </div>
+
+                <div class="info-box">
+                    <small>نوع الاستشارة</small>
+                    <strong>{{ appointment.get_consultation_type_display }}</strong>
+                </div>
+
+                <div class="info-box">
+                    <small>تاريخ الموعد</small>
+                    <strong>{{ appointment.appointment_date }}</strong>
+                </div>
+
+                <div class="info-box">
+                    <small>وقت الموعد</small>
+                    <strong>{{ appointment.appointment_time }}</strong>
+                </div>
+
+                <div class="info-box">
+                    <small>الحالة</small>
+                    <strong>
+                        {% if appointment.status == "pending" %}
+                            <span class="status-badge status-pending">قيد المراجعة</span>
+                        {% elif appointment.status == "confirmed" %}
+                            <span class="status-badge status-confirmed">مؤكد</span>
+                        {% elif appointment.status == "cancelled" %}
+                            <span class="status-badge status-cancelled">ملغي</span>
+                        {% else %}
+                            {{ appointment.get_status_display }}
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="info-box">
+                    <small>حالة الجلسة</small>
+                    <strong>
+                        {% if appointment.session_status == "not_started" %}
+                            <span class="status-badge session-not-started">لم تبدأ</span>
+                        {% elif appointment.session_status == "in_progress" %}
+                            <span class="status-badge session-in-progress">جارية</span>
+                        {% elif appointment.session_status == "completed" %}
+                            <span class="status-badge session-completed">مكتملة</span>
+                        {% else %}
+                            {{ appointment.get_session_status_display }}
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="info-box">
+                    <small>رقم الجوال</small>
+                    <strong>{{ appointment.phone }}</strong>
+                </div>
+
+                <div class="info-box">
+                    <small>البريد الإلكتروني</small>
+                    <strong>{{ appointment.email|default:"غير متوفر" }}</strong>
+                </div>
+
+                <div class="info-box">
+                    <small>العمر</small>
+                    <strong>{{ appointment.age|default:"غير محدد" }}</strong>
+                </div>
+
+                <div class="info-box">
+                    <small>الجنس</small>
+                    <strong>{{ appointment.get_gender_display|default:"غير محدد" }}</strong>
+                </div>
+            </div>
+
+            <div class="notes-box">
+                <h4>تفاصيل الحالة</h4>
+                <p>{{ appointment.notes|default:"لا توجد ملاحظات مضافة." }}</p>
+            </div>
+
+            <div class="notes-box">
+                <h4>ملاحظات الطبيب</h4>
+                <p>{{ appointment.doctor_notes|default:"لم تتم إضافة ملاحظات من الطبيب بعد." }}</p>
+            </div>
+
+            <div class="notes-box">
+                <h4>التشخيص</h4>
+                <p>{{ appointment.diagnosis|default:"لم يتم إضافة التشخيص بعد." }}</p>
+            </div>
+
+            <div class="notes-box">
+                <h4>الخطة العلاجية</h4>
+                <p>{{ appointment.treatment_plan|default:"لم يتم إضافة الخطة العلاجية بعد." }}</p>
+            </div>
+
+            <div class="upload-box">
+                <h4>رفع ملف طبي</h4>
+                <form method="post" action="{% url 'upload_appointment_attachment' appointment.id %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ upload_form.title.label }}</label>
+                        {{ upload_form.title }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ upload_form.file.label }}</label>
+                        {{ upload_form.file }}
+                    </div>
+                    <button type="submit" class="btn btn-main">رفع الملف</button>
+                </form>
+            </div>
+
+            <div class="files-box">
+                <h4>الملفات الطبية المرفوعة</h4>
+
+                {% if appointment.attachments.all %}
+                    {% for attachment in appointment.attachments.all %}
+                        <div class="file-item">
+                            <div class="file-meta">
+                                <div class="file-title">{{ attachment.title|default:attachment.filename }}</div>
+                                <div class="file-sub">
+                                    تم الرفع بتاريخ {{ attachment.created_at }}{% if attachment.uploaded_by %} بواسطة {{ attachment.uploaded_by.username }}{% endif %}
+                                </div>
+                            </div>
+                            <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-outline-main">فتح الملف</a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">لا توجد ملفات مرفوعة لهذا الحجز حتى الآن.</p>
+                {% endif %}
+            </div>
+
+            <div class="actions">
+                <a href="{% url 'appointment_list' %}" class="btn-outline-main">العودة إلى الحجوزات</a>
+                <a href="{% url 'appointment_chat' appointment.id %}" class="btn-outline-main">فتح الدرشة</a>
+                <a href="{% url 'patient_dashboard' %}" class="btn-main">العودة إلى لوحة المريض</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
