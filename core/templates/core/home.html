@@ -1,0 +1,884 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}طبيبك | منصة الاستشارات الطبية{% endblock %}
+
+{% block content %}
+
+<style>
+    :root{
+        --primary:#0F4C81;
+        --primary-dark:#0A355A;
+        --secondary:#14B8A6;
+        --bg:#F8FAFC;
+        --bg-soft:#F1F7FB;
+        --text:#1E293B;
+        --muted:#64748B;
+        --border:#E2E8F0;
+        --white:#FFFFFF;
+        --shadow:0 18px 40px rgba(15,76,129,.08);
+        --shadow-soft:0 10px 25px rgba(15,76,129,.05);
+    }
+
+    body{
+        font-family:'Cairo',sans-serif;
+        background:var(--bg);
+        color:var(--text);
+    }
+
+    .navbar-tabeebak{
+        background:rgba(255,255,255,.92);
+        backdrop-filter:blur(12px);
+        border-bottom:1px solid rgba(226,232,240,.9);
+        padding:12px 0;
+    }
+
+    .brand-logo{
+        width:48px;
+        height:48px;
+        border-radius:16px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        font-size:1.2rem;
+        box-shadow:0 10px 22px rgba(15,76,129,.18);
+    }
+
+    .brand-name{
+        font-weight:800;
+        color:var(--primary-dark);
+        line-height:1.1;
+        font-size:1.15rem;
+    }
+
+    .brand-sub{
+        font-size:.84rem;
+        color:var(--muted);
+    }
+
+    .nav-link{
+        font-weight:700;
+        color:var(--text) !important;
+        margin-inline:8px;
+        transition:.2s ease;
+    }
+
+    .nav-link:hover{
+        color:var(--primary) !important;
+    }
+
+    .btn-main{
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        border:none;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        box-shadow:0 12px 24px rgba(15,76,129,.18);
+        transition:.25s;
+        text-decoration:none;
+    }
+
+    .btn-main:hover{
+        color:#fff;
+        transform:translateY(-2px);
+    }
+
+    .btn-outline-main{
+        border:1.5px solid var(--primary);
+        color:var(--primary);
+        background:#fff;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        transition:.25s;
+        text-decoration:none;
+    }
+
+    .btn-outline-main:hover{
+        background:var(--primary);
+        color:#fff;
+    }
+
+    .btn-soft{
+        background:rgba(20,184,166,.10);
+        color:var(--secondary);
+        border:none;
+        border-radius:999px;
+        padding:11px 20px;
+        font-weight:800;
+        text-decoration:none;
+    }
+
+    .hero{
+        padding:130px 0 90px;
+        background:
+            radial-gradient(circle at top right, rgba(20,184,166,.12), transparent 25%),
+            radial-gradient(circle at left center, rgba(15,76,129,.10), transparent 20%),
+            linear-gradient(180deg,#fff 0%,#F8FAFC 100%);
+        position:relative;
+        overflow:hidden;
+    }
+
+    .hero-badge{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        background:rgba(15,76,129,.08);
+        color:var(--primary);
+        padding:10px 16px;
+        border-radius:999px;
+        font-weight:800;
+        margin-bottom:18px;
+    }
+
+    .hero-title{
+        font-size:clamp(2rem,4vw,4.15rem);
+        font-weight:800;
+        line-height:1.3;
+        color:var(--primary-dark);
+        margin-bottom:12px;
+    }
+
+    .hero-title .highlight{
+        color:var(--secondary);
+    }
+
+    .hero-subtitle{
+        color:var(--muted);
+        font-size:1.05rem;
+        line-height:2;
+        margin:18px 0 28px;
+        max-width:640px;
+    }
+
+    .hero-features{
+        display:flex;
+        flex-wrap:wrap;
+        gap:10px;
+        margin-top:20px;
+    }
+
+    .hero-pill{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:999px;
+        padding:10px 16px;
+        font-weight:700;
+        color:var(--text);
+        box-shadow:var(--shadow-soft);
+    }
+
+    .hero-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:30px;
+        padding:28px;
+        box-shadow:var(--shadow);
+        position:relative;
+    }
+
+    .floating-badge{
+        position:absolute;
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:18px;
+        box-shadow:var(--shadow-soft);
+        padding:12px 16px;
+        font-weight:800;
+        color:var(--primary-dark);
+    }
+
+    .floating-badge.top{
+        top:-18px;
+        left:-12px;
+    }
+
+    .floating-badge.bottom{
+        bottom:-18px;
+        right:-10px;
+    }
+
+    .floating-badge small{
+        display:block;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:4px;
+    }
+
+    .doctor-mini{
+        display:flex;
+        align-items:center;
+        gap:14px;
+        margin-bottom:22px;
+    }
+
+    .doctor-avatar{
+        width:74px;
+        height:74px;
+        border-radius:20px;
+        background:linear-gradient(135deg,#DBEAFE,#CCFBF1);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:var(--primary);
+        font-size:1.8rem;
+        flex-shrink:0;
+    }
+
+    .doctor-mini h5{
+        margin:0 0 4px;
+    }
+
+    .stats-grid{
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+        gap:12px;
+        margin-bottom:18px;
+    }
+
+    .stat-box{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:18px;
+        padding:14px;
+        text-align:center;
+    }
+
+    .stat-box strong{
+        display:block;
+        color:var(--primary-dark);
+        font-size:1.12rem;
+        font-weight:800;
+        margin-bottom:4px;
+    }
+
+    .stat-box span{
+        font-size:.85rem;
+        color:var(--muted);
+        font-weight:700;
+    }
+
+    .section{
+        padding:85px 0;
+    }
+
+    .section-alt{
+        background:linear-gradient(180deg,#ffffff 0%, #f7fbfd 100%);
+    }
+
+    .section-tag{
+        display:inline-block;
+        background:rgba(20,184,166,.1);
+        color:var(--secondary);
+        padding:8px 14px;
+        border-radius:999px;
+        font-weight:800;
+        margin-bottom:14px;
+    }
+
+    .section-title{
+        font-size:clamp(1.6rem,3vw,2.5rem);
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:10px;
+    }
+
+    .section-subtitle{
+        color:var(--muted);
+        line-height:1.9;
+        max-width:720px;
+        margin:auto;
+    }
+
+    .card-ui{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:24px;
+        padding:24px;
+        height:100%;
+        box-shadow:var(--shadow-soft);
+        transition:.25s;
+    }
+
+    .card-ui:hover{
+        transform:translateY(-6px);
+        box-shadow:0 16px 30px rgba(15,76,129,.08);
+    }
+
+    .icon-box{
+        width:60px;
+        height:60px;
+        border-radius:18px;
+        background:linear-gradient(135deg,rgba(15,76,129,.1),rgba(20,184,166,.12));
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:var(--primary);
+        font-size:1.5rem;
+        margin-bottom:16px;
+    }
+
+    .specialty-count{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        color:var(--primary);
+        font-weight:800;
+        margin-top:16px;
+    }
+
+    .doctor-card .doctor-avatar{
+        width:64px;
+        height:64px;
+        border-radius:18px;
+    }
+
+    .doctor-badges{
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        margin-top:14px;
+    }
+
+    .doctor-badge{
+        background:rgba(15,76,129,.07);
+        color:var(--primary);
+        border-radius:999px;
+        padding:8px 12px;
+        font-size:.85rem;
+        font-weight:800;
+    }
+
+    .doctor-price{
+        color:var(--primary-dark);
+        font-weight:800;
+        font-size:1.1rem;
+    }
+
+    .feature-list{
+        list-style:none;
+        padding:0;
+        margin:0;
+    }
+
+    .feature-list li{
+        display:flex;
+        align-items:flex-start;
+        gap:10px;
+        margin-bottom:12px;
+        color:var(--text);
+        font-weight:700;
+    }
+
+    .step-number{
+        width:38px;
+        height:38px;
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        margin:0 auto 14px;
+        background:var(--primary);
+        color:#fff;
+        font-weight:800;
+    }
+
+    .cta-box{
+        background:
+            radial-gradient(circle at top left, rgba(20,184,166,.12), transparent 35%),
+            linear-gradient(135deg,#ffffff 0%, #f4fbfb 100%);
+        border:1px solid var(--border);
+        border-radius:30px;
+        padding:34px;
+        box-shadow:var(--shadow);
+    }
+
+    .footer{
+        background:#0B2239;
+        color:rgba(255,255,255,.82);
+        padding:65px 0 22px;
+    }
+
+    .footer h5,.footer h6{
+        color:#fff;
+        font-weight:800;
+    }
+
+    .footer a{
+        color:rgba(255,255,255,.8);
+        text-decoration:none;
+    }
+
+    .footer a:hover{
+        color:#fff;
+    }
+
+    .footer-bottom{
+        border-top:1px solid rgba(255,255,255,.1);
+        margin-top:25px;
+        padding-top:18px;
+        text-align:center;
+        font-size:.95rem;
+    }
+
+    @media (max-width: 991.98px){
+        .hero{
+            padding-top:110px;
+        }
+
+        .hero-card{
+            margin-top:20px;
+        }
+
+        .floating-badge{
+            position:static;
+            margin-bottom:12px;
+            display:inline-block;
+        }
+    }
+
+    @media (max-width: 767.98px){
+        .stats-grid{
+            grid-template-columns:1fr;
+        }
+
+        .doctor-mini{
+            align-items:flex-start;
+        }
+
+        .hero-actions{
+            flex-direction:column;
+            align-items:stretch !important;
+        }
+    }
+</style>
+
+<nav class="navbar navbar-expand-lg navbar-tabeebak fixed-top">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-3" href="{% url 'home' %}">
+            <div class="brand-logo">
+                <i class="bi bi-heart-pulse-fill"></i>
+            </div>
+            <div>
+                <div class="brand-name">طبيبك</div>
+                <div class="brand-sub">منصة الاستشارات الطبية للسودانيين</div>
+            </div>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavbar">
+            <ul class="navbar-nav mx-auto mb-3 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">الرئيسية</a></li>
+                <li class="nav-item"><a class="nav-link" href="#specialties">التخصصات</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'doctor_list' %}">الأطباء</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'appointment_list' %}">الحجوزات</a></li>
+                <li class="nav-item"><a class="nav-link" href="#how-it-works">كيف تعمل</a></li>
+                <li class="nav-item"><a class="nav-link" href="#contact">تواصل معنا</a></li>
+            </ul>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="#" class="btn btn-outline-main">تسجيل الدخول</a>
+                <a href="{% url 'doctor_list' %}" class="btn btn-main">ابدأ الآن</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <div class="hero-badge">
+                    <i class="bi bi-shield-check"></i>
+                    منصة موثوقة لاستشارات طبية آمنة
+                </div>
+
+                <h1 class="hero-title">
+                    استشر <span class="highlight">طبيبك</span><br>
+                    من أي مكان بسهولة وأمان
+                </h1>
+
+                <p class="hero-subtitle">
+                    منصة عربية حديثة تربط المرضى السودانيين بأطباء موثّقين، مع تجربة سهلة للحجز، رفع التحاليل والتقارير، وحفظ سجل الاستشارات الطبية في مكان واحد.
+                </p>
+
+                <div class="d-flex gap-3 flex-wrap align-items-center hero-actions">
+                    <a href="{% url 'doctor_list' %}" class="btn btn-main">احجز استشارة الآن</a>
+                    <a href="{% url 'doctor_list' %}" class="btn btn-outline-main">عرض الأطباء</a>
+                    <a href="{% url 'appointment_list' %}" class="btn btn-outline-main">عرض الحجوزات</a>
+                </div>
+
+                <div class="hero-features">
+                    <span class="hero-pill"><i class="bi bi-check-circle-fill text-success me-2"></i>أطباء موثّقون</span>
+                    <span class="hero-pill"><i class="bi bi-check-circle-fill text-success me-2"></i>واجهة عربية كاملة</span>
+                    <span class="hero-pill"><i class="bi bi-check-circle-fill text-success me-2"></i>رفع ملفات وتقارير</span>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="hero-card">
+                    <div class="floating-badge top">
+                        <small>استشارة عاجلة</small>
+                        متاحة خلال 15 دقيقة
+                    </div>
+
+                    <div class="floating-badge bottom">
+                        <small>رضا المستخدمين</small>
+                        4.9 من 5
+                    </div>
+
+                    <div class="doctor-mini">
+                        <div class="doctor-avatar">
+                            <i class="bi bi-person-heart"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold">د. محمد أحمد</h5>
+                            <div class="text-muted">استشاري باطنية - 12 سنة خبرة</div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <strong>1200+</strong>
+                            <span>استشارة</span>
+                        </div>
+                        <div class="stat-box">
+                            <strong>4.9</strong>
+                            <span>تقييم</span>
+                        </div>
+                        <div class="stat-box">
+                            <strong>75 ر.س</strong>
+                            <span>السعر</span>
+                        </div>
+                    </div>
+
+                    <div class="card-ui">
+                        <h6 class="fw-bold mb-3">مزايا المنصة</h6>
+                        <ul class="feature-list">
+                            <li><i class="bi bi-check-circle-fill text-success"></i><span>أطباء موثّقون وملفات مهنية واضحة</span></li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i><span>رفع التحاليل والتقارير والصور الطبية</span></li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i><span>استشارة كتابية سهلة ومتابعة لاحقة</span></li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i><span>حفظ سجل الاستشارات داخل الحساب</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="specialties">
+    <div class="container text-center">
+        <span class="section-tag">التخصصات الطبية</span>
+        <h2 class="section-title">اختر التخصص المناسب لحالتك</h2>
+        <p class="section-subtitle mb-5">
+            الوصول للطبيب المناسب يبدأ من اختيار التخصص الصحيح بطريقة بسيطة وواضحة، مع عرض سريع لأهم المجالات المطلوبة.
+        </p>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="card-ui">
+                    <div class="icon-box mx-auto"><i class="bi bi-heart-pulse"></i></div>
+                    <h5 class="fw-bold">الباطنية</h5>
+                    <p class="text-muted">متابعة الأمراض العامة وقراءة التحاليل والتقارير والاستشارات غير الطارئة.</p>
+                    <div class="specialty-count justify-content-center d-flex">
+                        <i class="bi bi-person-badge"></i>
+                        24 طبيب
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card-ui">
+                    <div class="icon-box mx-auto"><i class="bi bi-emoji-smile"></i></div>
+                    <h5 class="fw-bold">الأطفال</h5>
+                    <p class="text-muted">استشارات خاصة بصحة الطفل، الحمى، التغذية، والمتابعة الصحية للأهل.</p>
+                    <div class="specialty-count justify-content-center d-flex">
+                        <i class="bi bi-person-badge"></i>
+                        18 طبيب
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card-ui">
+                    <div class="icon-box mx-auto"><i class="bi bi-droplet-half"></i></div>
+                    <h5 class="fw-bold">الجلدية</h5>
+                    <p class="text-muted">تقييم أولي للحالات الجلدية، الحساسية، الصور الطبية، ومتابعة العلاج.</p>
+                    <div class="specialty-count justify-content-center d-flex">
+                        <i class="bi bi-person-badge"></i>
+                        15 طبيب
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card-ui">
+                    <div class="icon-box mx-auto"><i class="bi bi-gender-female"></i></div>
+                    <h5 class="fw-bold">النساء والتوليد</h5>
+                    <p class="text-muted">استشارات الحمل والمتابعة النسائية الأولية والإرشاد الصحي الموثوق.</p>
+                    <div class="specialty-count justify-content-center d-flex">
+                        <i class="bi bi-person-badge"></i>
+                        12 طبيب
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card-ui">
+                    <div class="icon-box mx-auto"><i class="bi bi-bandaid"></i></div>
+                    <h5 class="fw-bold">العظام</h5>
+                    <p class="text-muted">آلام المفاصل، الإصابات الخفيفة، وتقارير الأشعة والمتابعة الأولية.</p>
+                    <div class="specialty-count justify-content-center d-flex">
+                        <i class="bi bi-person-badge"></i>
+                        10 أطباء
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card-ui">
+                    <div class="icon-box mx-auto"><i class="bi bi-moon-stars"></i></div>
+                    <h5 class="fw-bold">الصحة النفسية</h5>
+                    <p class="text-muted">دعم واستشارة نفسية أولية بسرية وهدوء وبواجهة مناسبة للمستخدم العربي.</p>
+                    <div class="specialty-count justify-content-center d-flex">
+                        <i class="bi bi-person-badge"></i>
+                        8 أطباء
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-6">
+                <span class="section-tag">لماذا طبيبك؟</span>
+                <h2 class="section-title">تجربة أسهل للمريض وثقة أكبر</h2>
+                <p class="section-subtitle text-start me-0 mb-4">
+                    صُممت المنصة لتكون بسيطة وواضحة من أول زيارة، مع تركيز كبير على الثقة، سهولة الوصول للطبيب، وإدارة الاستشارة داخل بيئة عربية مريحة.
+                </p>
+
+                <ul class="feature-list">
+                    <li><i class="bi bi-check-circle-fill text-success"></i><span>واجهة عربية كاملة ومناسبة للاستخدام من الجوال والويب</span></li>
+                    <li><i class="bi bi-check-circle-fill text-success"></i><span>إمكانية الحجز السريع وبدء الاستشارة خلال وقت قصير</span></li>
+                    <li><i class="bi bi-check-circle-fill text-success"></i><span>عرض واضح للتخصصات والأسعار والخبرة قبل اتخاذ القرار</span></li>
+                    <li><i class="bi bi-check-circle-fill text-success"></i><span>حفظ ملفات المريض وتاريخه الاستشاري للمتابعة المستقبلية</span></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="row g-4">
+                    <div class="col-sm-6">
+                        <div class="card-ui text-center">
+                            <div class="icon-box mx-auto"><i class="bi bi-patch-check"></i></div>
+                            <h5 class="fw-bold">أطباء موثّقون</h5>
+                            <p class="text-muted">كل ملف طبيب يمر بالمراجعة قبل الظهور داخل المنصة.</p>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card-ui text-center">
+                            <div class="icon-box mx-auto"><i class="bi bi-file-earmark-medical"></i></div>
+                            <h5 class="fw-bold">رفع ملفات طبية</h5>
+                            <p class="text-muted">إرفاق التحاليل والتقارير والصور مباشرة أثناء الاستشارة.</p>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card-ui text-center">
+                            <div class="icon-box mx-auto"><i class="bi bi-bell"></i></div>
+                            <h5 class="fw-bold">إشعارات فورية</h5>
+                            <p class="text-muted">تنبيهات بالمواعيد والردود الجديدة داخل الحساب.</p>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card-ui text-center">
+                            <div class="icon-box mx-auto"><i class="bi bi-clock-history"></i></div>
+                            <h5 class="fw-bold">سجل محفوظ</h5>
+                            <p class="text-muted">الاحتفاظ بتاريخ الاستشارات للرجوع إليه لاحقًا.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section pt-0" id="doctors">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="section-tag">الأطباء المميزون</span>
+            <h2 class="section-title">نخبة من الأطباء السودانيين</h2>
+            <p class="section-subtitle">
+                عرض مبسط وواضح للأطباء مع السعر والتقييم والخبرة وإمكانية الحجز المباشر.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-xl-4">
+                <div class="card-ui doctor-card">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="doctor-avatar"><i class="bi bi-person"></i></div>
+                        <div>
+                            <h5 class="mb-1 fw-bold">د. آمنة الطيب</h5>
+                            <div class="text-muted">استشارية أطفال</div>
+                        </div>
+                    </div>
+                    <p class="text-muted">متخصصة في متابعة الأطفال وتقديم استشارات أسرية واضحة وسريعة.</p>
+                    <div class="doctor-badges">
+                        <span class="doctor-badge">⭐ 4.9</span>
+                        <span class="doctor-badge">9 سنوات خبرة</span>
+                        <span class="doctor-badge">موثّق</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <span class="doctor-price">80 ر.س</span>
+                        <a href="{% url 'doctor_list' %}" class="btn btn-main">احجز الآن</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-xl-4">
+                <div class="card-ui doctor-card">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="doctor-avatar"><i class="bi bi-person"></i></div>
+                        <div>
+                            <h5 class="mb-1 fw-bold">د. أحمد عثمان</h5>
+                            <div class="text-muted">استشاري باطنية</div>
+                        </div>
+                    </div>
+                    <p class="text-muted">متابعة الأمراض المزمنة وقراءة التحاليل والاستشارات العامة غير الطارئة.</p>
+                    <div class="doctor-badges">
+                        <span class="doctor-badge">⭐ 4.8</span>
+                        <span class="doctor-badge">12 سنة خبرة</span>
+                        <span class="doctor-badge">متاح اليوم</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <span class="doctor-price">95 ر.س</span>
+                        <a href="{% url 'doctor_list' %}" class="btn btn-main">احجز الآن</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-xl-4">
+                <div class="card-ui doctor-card">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="doctor-avatar"><i class="bi bi-person"></i></div>
+                        <div>
+                            <h5 class="mb-1 fw-bold">د. سارة عبد الله</h5>
+                            <div class="text-muted">استشارية جلدية</div>
+                        </div>
+                    </div>
+                    <p class="text-muted">خبرة في الاستشارات الجلدية الأولية وتقييم الصور الطبية وخطط العلاج.</p>
+                    <div class="doctor-badges">
+                        <span class="doctor-badge">⭐ 4.9</span>
+                        <span class="doctor-badge">7 سنوات خبرة</span>
+                        <span class="doctor-badge">سريعة الرد</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <span class="doctor-price">85 ر.س</span>
+                        <a href="{% url 'doctor_list' %}" class="btn btn-main">احجز الآن</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="how-it-works">
+    <div class="container text-center">
+        <span class="section-tag">كيف تعمل المنصة</span>
+        <h2 class="section-title">3 خطوات فقط لبدء الاستشارة</h2>
+        <p class="section-subtitle mb-5">
+            رحلة استخدام مختصرة وواضحة للمريض من أول دخول حتى بدء الاستشارة داخل المنصة.
+        </p>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card-ui text-center">
+                    <div class="step-number">1</div>
+                    <div class="icon-box mx-auto"><i class="bi bi-grid"></i></div>
+                    <h5 class="fw-bold">اختر التخصص</h5>
+                    <p class="text-muted">حدد التخصص المناسب لحالتك بسرعة من بين التخصصات المتاحة.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-ui text-center">
+                    <div class="step-number">2</div>
+                    <div class="icon-box mx-auto"><i class="bi bi-calendar-check"></i></div>
+                    <h5 class="fw-bold">احجز الموعد</h5>
+                    <p class="text-muted">اختر الطبيب والوقت المناسب وأكد الحجز خلال خطوات بسيطة جدًا.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-ui text-center">
+                    <div class="step-number">3</div>
+                    <div class="icon-box mx-auto"><i class="bi bi-chat-dots"></i></div>
+                    <h5 class="fw-bold">ابدأ الاستشارة</h5>
+                    <p class="text-muted">تواصل مع الطبيب وشارك الملفات الطبية بسهولة داخل حسابك.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section pt-0" id="contact">
+    <div class="container">
+        <div class="cta-box">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-8">
+                    <span class="section-tag">ابدأ اليوم</span>
+                    <h2 class="section-title mb-3">هل أنت طبيب سوداني وتريد الوصول لمرضى أكثر؟</h2>
+                    <p class="text-muted mb-0" style="line-height:1.9;">
+                        أنشئ ملفك المهني داخل منصة طبيبك، وحدد تخصصك وأسعارك، وابدأ في تقديم استشاراتك عبر تجربة عربية واضحة واحترافية.
+                    </p>
+                </div>
+                <div class="col-lg-4 text-lg-start text-center">
+                    <a href="#" class="btn btn-main me-2 mb-2">سجل كطبيب</a>
+                    <a href="{% url 'appointment_list' %}" class="btn btn-outline-main mb-2">متابعة الحجوزات</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <h5>طبيبك</h5>
+                <p>منصة استشارات طبية عربية تربط المرضى السودانيين بأطباء موثّقين عبر تجربة سهلة وآمنة ومريحة للمستخدم.</p>
+            </div>
+
+            <div class="col-lg-4">
+                <h6>روابط</h6>
+                <div class="d-flex flex-column gap-2">
+                    <a href="{% url 'home' %}">الرئيسية</a>
+                    <a href="{% url 'doctor_list' %}">الأطباء</a>
+                    <a href="{% url 'appointment_list' %}">الحجوزات</a>
+                    <a href="#specialties">التخصصات</a>
+                    <a href="#contact">تواصل معنا</a>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <h6>تنبيه مهم</h6>
+                <p>المنصة مخصصة للاستشارات غير الطارئة، ولا تغني عن التوجه إلى الطوارئ في الحالات الحرجة.</p>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            جميع الحقوق محفوظة © 2026 - منصة طبيبك
+        </div>
+    </div>
+</footer>
+
+{% endblock %}

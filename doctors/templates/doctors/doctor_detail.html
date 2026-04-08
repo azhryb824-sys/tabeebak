@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ doctor.name }} | طبيبك{% endblock %}
+
+{% block content %}
+
+<style>
+    :root{
+        --primary:#0F4C81;
+        --primary-dark:#0A355A;
+        --secondary:#14B8A6;
+        --bg:#F8FAFC;
+        --bg-soft:#F1F7FB;
+        --text:#1E293B;
+        --muted:#64748B;
+        --border:#E2E8F0;
+        --white:#FFFFFF;
+        --shadow:0 18px 40px rgba(15,76,129,.08);
+        --shadow-soft:0 10px 25px rgba(15,76,129,.05);
+    }
+
+    body{
+        font-family:'Cairo',sans-serif;
+        background:var(--bg);
+        color:var(--text);
+    }
+
+    .page-hero{
+        padding:120px 0 50px;
+        background:
+            radial-gradient(circle at top right, rgba(20,184,166,.12), transparent 24%),
+            radial-gradient(circle at left center, rgba(15,76,129,.10), transparent 18%),
+            linear-gradient(180deg,#ffffff 0%, #f8fbfd 100%);
+    }
+
+    .crumbs{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        flex-wrap:wrap;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:18px;
+    }
+
+    .crumbs a{
+        color:var(--primary);
+        text-decoration:none;
+    }
+
+    .doctor-hero-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:30px;
+        padding:28px;
+        box-shadow:var(--shadow);
+        margin-top:-10px;
+    }
+
+    .doctor-header{
+        display:flex;
+        align-items:flex-start;
+        gap:22px;
+    }
+
+    .doctor-avatar{
+        width:120px;
+        height:120px;
+        border-radius:28px;
+        background:linear-gradient(135deg,#DBEAFE,#CCFBF1);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:var(--primary);
+        font-size:2.6rem;
+        overflow:hidden;
+        flex-shrink:0;
+    }
+
+    .doctor-avatar img{
+        width:100%;
+        height:100%;
+        object-fit:cover;
+    }
+
+    .doctor-name{
+        font-size:2rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:8px;
+    }
+
+    .doctor-specialization{
+        color:var(--muted);
+        font-size:1.05rem;
+        font-weight:700;
+        margin-bottom:14px;
+    }
+
+    .doctor-badges{
+        display:flex;
+        flex-wrap:wrap;
+        gap:10px;
+    }
+
+    .doctor-badge{
+        background:rgba(15,76,129,.07);
+        color:var(--primary);
+        border-radius:999px;
+        padding:9px 14px;
+        font-size:.88rem;
+        font-weight:800;
+    }
+
+    .doctor-actions{
+        display:flex;
+        flex-wrap:wrap;
+        gap:12px;
+        margin-top:20px;
+    }
+
+    .btn-main{
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        border:none;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        box-shadow:0 12px 24px rgba(15,76,129,.18);
+        transition:.25s;
+        text-decoration:none;
+    }
+
+    .btn-main:hover{
+        color:#fff;
+        transform:translateY(-2px);
+    }
+
+    .btn-outline-main{
+        border:1.5px solid var(--primary);
+        color:var(--primary);
+        background:#fff;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        transition:.25s;
+        text-decoration:none;
+    }
+
+    .btn-outline-main:hover{
+        background:var(--primary);
+        color:#fff;
+    }
+
+    .stats-row{
+        margin-top:24px;
+    }
+
+    .stat-card{
+        background:var(--bg-soft);
+        border:1px solid rgba(15,76,129,.06);
+        border-radius:22px;
+        padding:18px;
+        height:100%;
+    }
+
+    .stat-card small{
+        display:block;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:6px;
+    }
+
+    .stat-card strong{
+        color:var(--primary-dark);
+        font-size:1.15rem;
+        font-weight:800;
+    }
+
+    .content-section{
+        padding:32px 0 80px;
+    }
+
+    .content-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:28px;
+        padding:26px;
+        box-shadow:var(--shadow-soft);
+        height:100%;
+    }
+
+    .content-card h4{
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:18px;
+    }
+
+    .bio-text{
+        color:var(--muted);
+        line-height:2;
+        font-size:1rem;
+    }
+
+    .list-info{
+        list-style:none;
+        padding:0;
+        margin:0;
+    }
+
+    .list-info li{
+        display:flex;
+        align-items:flex-start;
+        gap:10px;
+        margin-bottom:14px;
+        color:var(--text);
+        font-weight:700;
+        line-height:1.8;
+    }
+
+    .price-box{
+        background:
+            radial-gradient(circle at top left, rgba(20,184,166,.12), transparent 35%),
+            linear-gradient(135deg,#ffffff 0%, #f4fbfb 100%);
+        border:1px solid var(--border);
+        border-radius:28px;
+        padding:28px;
+        box-shadow:var(--shadow);
+        text-align:center;
+    }
+
+    .price-box small{
+        display:block;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:8px;
+    }
+
+    .price-box .price{
+        color:var(--primary-dark);
+        font-size:2rem;
+        font-weight:800;
+        margin-bottom:18px;
+    }
+
+    .notice-box{
+        margin-top:18px;
+        background:#fff;
+        border:1px dashed rgba(20,184,166,.45);
+        border-radius:20px;
+        padding:16px;
+        color:var(--muted);
+        line-height:1.9;
+        font-weight:700;
+    }
+
+    .review-summary{
+        display:flex;
+        gap:18px;
+        flex-wrap:wrap;
+        margin-bottom:22px;
+    }
+
+    .review-summary-card{
+        background:var(--bg-soft);
+        border:1px solid rgba(15,76,129,.06);
+        border-radius:20px;
+        padding:18px 20px;
+        min-width:180px;
+    }
+
+    .review-summary-card small{
+        display:block;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:6px;
+    }
+
+    .review-summary-card strong{
+        font-size:1.7rem;
+        color:var(--primary-dark);
+        font-weight:800;
+    }
+
+    .review-list{
+        display:grid;
+        gap:14px;
+    }
+
+    .review-item{
+        border:1px solid var(--border);
+        border-radius:18px;
+        padding:18px;
+        background:#fff;
+    }
+
+    .review-top{
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:12px;
+        flex-wrap:wrap;
+        margin-bottom:8px;
+    }
+
+    .review-name{
+        font-weight:800;
+        color:var(--text);
+    }
+
+    .review-rating{
+        color:#F59E0B;
+        font-weight:800;
+    }
+
+    .review-comment{
+        color:var(--muted);
+        line-height:1.9;
+        font-size:.97rem;
+    }
+
+    .review-date{
+        margin-top:10px;
+        color:#94A3B8;
+        font-size:.82rem;
+        font-weight:700;
+    }
+
+    @media (max-width: 991.98px){
+        .doctor-header{
+            flex-direction:column;
+            align-items:flex-start;
+        }
+    }
+
+    @media (max-width: 767.98px){
+        .page-hero{
+            padding-top:105px;
+        }
+
+        .doctor-name{
+            font-size:1.6rem;
+        }
+
+        .doctor-actions{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .doctor-actions .btn-main,
+        .doctor-actions .btn-outline-main{
+            width:100%;
+            text-align:center;
+        }
+    }
+</style>
+
+<section class="page-hero">
+    <div class="container">
+        <div class="crumbs">
+            <a href="{% url 'home' %}">الرئيسية</a>
+            <span>/</span>
+            <a href="{% url 'doctor_list' %}">الأطباء</a>
+            <span>/</span>
+            <span>{{ doctor.name }}</span>
+        </div>
+
+        <div class="doctor-hero-card">
+            <div class="doctor-header">
+                <div class="doctor-avatar">
+                    {% if doctor.image %}
+                        <img src="{{ doctor.image.url }}" alt="{{ doctor.name }}">
+                    {% else %}
+                        <i class="bi bi-person"></i>
+                    {% endif %}
+                </div>
+
+                <div class="flex-grow-1">
+                    <h1 class="doctor-name">{{ doctor.name }}</h1>
+                    <div class="doctor-specialization">{{ doctor.specialization }}</div>
+
+                    <div class="doctor-badges">
+                        <span class="doctor-badge">
+                            ⭐ {{ review_stats.avg_rating|default:doctor.rating|floatformat:1 }}
+                        </span>
+                        <span class="doctor-badge">{{ doctor.experience_years }} سنوات خبرة</span>
+                        <span class="doctor-badge">طبيب موثّق</span>
+                    </div>
+
+                    <div class="doctor-actions">
+                        <a href="{% url 'booking_create' doctor.id %}" class="btn btn-main">احجز استشارة الآن</a>
+                        <a href="{% url 'doctor_list' %}" class="btn btn-outline-main">العودة لقائمة الأطباء</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 stats-row">
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <small>التخصص</small>
+                        <strong>{{ doctor.specialization }}</strong>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <small>عدد سنوات الخبرة</small>
+                        <strong>{{ doctor.experience_years }} سنوات</strong>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <small>التقييم</small>
+                        <strong>{{ review_stats.avg_rating|default:doctor.rating|floatformat:1 }} / 5</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content-section">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="content-card mb-4">
+                    <h4>نبذة عن الطبيب</h4>
+                    <div class="bio-text">
+                        {{ doctor.bio|linebreaks }}
+                    </div>
+                </div>
+
+                <div class="content-card mb-4">
+                    <h4>معلومات إضافية</h4>
+                    <ul class="list-info">
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>استشارات طبية غير طارئة عبر منصة عربية سهلة وواضحة.</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>إمكانية مشاركة التحاليل والتقارير الطبية أثناء الحجز أو أثناء الاستشارة.</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>الطبيب ظاهر بملف مهني واضح يشمل التخصص والخبرة والتقييم.</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>يمكن لاحقاً ربط الصفحة بالمواعيد المتاحة ونظام الحجز الفعلي.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="content-card">
+                    <h4>تقييمات المرضى</h4>
+
+                    <div class="review-summary">
+                        <div class="review-summary-card">
+                            <small>متوسط التقييم</small>
+                            <strong>{{ review_stats.avg_rating|default:0|floatformat:1 }}</strong>
+                        </div>
+
+                        <div class="review-summary-card">
+                            <small>عدد التقييمات</small>
+                            <strong>{{ review_stats.reviews_count|default:0 }}</strong>
+                        </div>
+                    </div>
+
+                    {% if latest_reviews %}
+                        <div class="review-list">
+                            {% for review in latest_reviews %}
+                                <div class="review-item">
+                                    <div class="review-top">
+                                        <div class="review-name">
+                                            {{ review.patient.get_full_name|default:review.patient.username }}
+                                        </div>
+                                        <div class="review-rating">
+                                            {{ review.rating }} / 5 ⭐
+                                        </div>
+                                    </div>
+
+                                    {% if review.comment %}
+                                        <div class="review-comment">{{ review.comment }}</div>
+                                    {% else %}
+                                        <div class="review-comment">لا يوجد تعليق.</div>
+                                    {% endif %}
+
+                                    <div class="review-date">
+                                        {{ review.created_at|date:"Y-m-d H:i" }}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="bio-text">
+                            لا توجد تقييمات حتى الآن.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="price-box">
+                    <small>سعر الاستشارة</small>
+                    <div class="price">{{ doctor.price }} ج.س</div>
+                    <a href="{% url 'booking_create' doctor.id %}" class="btn btn-main w-100">احجز الآن</a>
+
+                    <div class="notice-box">
+                        هذه الصفحة مخصصة لعرض معلومات الطبيب بشكل واضح ومهني، ويمكنك الآن ربط زر الحجز بصفحة المواعيد الفعلية داخل المنصة.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

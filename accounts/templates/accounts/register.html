@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}إنشاء حساب | طبيبك{% endblock %}
+
+{% block content %}
+<style>
+    :root{
+        --primary:#0F4C81;
+        --secondary:#14B8A6;
+        --bg:#F8FAFC;
+        --border:#E2E8F0;
+        --text:#1E293B;
+        --muted:#64748B;
+    }
+
+    body{
+        font-family:'Cairo',sans-serif;
+        background:var(--bg);
+    }
+
+    .auth-section{
+        min-height:100vh;
+        display:flex;
+        align-items:center;
+        padding:40px 0;
+    }
+
+    .auth-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:28px;
+        padding:32px;
+        box-shadow:0 18px 40px rgba(15,76,129,.08);
+    }
+
+    .auth-title{
+        font-size:2rem;
+        font-weight:800;
+        color:#0A355A;
+        margin-bottom:8px;
+    }
+
+    .auth-subtitle{
+        color:var(--muted);
+        margin-bottom:24px;
+    }
+
+    .form-label{
+        font-weight:800;
+        color:#0A355A;
+    }
+
+    .form-control,
+    .form-select{
+        border-radius:16px;
+        min-height:50px;
+        border:1px solid var(--border);
+        box-shadow:none !important;
+    }
+
+    .btn-main{
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        border:none;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        width:100%;
+    }
+
+    .auth-link{
+        color:var(--primary);
+        font-weight:800;
+        text-decoration:none;
+    }
+
+    .error-text{
+        color:#dc2626;
+        font-size:.88rem;
+        margin-top:6px;
+        font-weight:700;
+    }
+</style>
+
+<section class="auth-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7">
+                <div class="auth-card">
+                    <h1 class="auth-title">إنشاء حساب جديد</h1>
+                    <p class="auth-subtitle">أنشئ حسابك وابدأ استخدام منصة طبيبك.</p>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.first_name.label }}</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}<div class="error-text">{{ form.first_name.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.last_name.label }}</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}<div class="error-text">{{ form.last_name.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.username.label }}</label>
+                                {{ form.username }}
+                                {% if form.username.errors %}<div class="error-text">{{ form.username.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.email.label }}</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}<div class="error-text">{{ form.email.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.phone.label }}</label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}<div class="error-text">{{ form.phone.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.user_type.label }}</label>
+                                {{ form.user_type }}
+                                {% if form.user_type.errors %}<div class="error-text">{{ form.user_type.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.password1.label }}</label>
+                                {{ form.password1 }}
+                                {% if form.password1.errors %}<div class="error-text">{{ form.password1.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.password2.label }}</label>
+                                {{ form.password2 }}
+                                {% if form.password2.errors %}<div class="error-text">{{ form.password2.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-main">إنشاء الحساب</button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <span class="text-muted">لديك حساب بالفعل؟</span>
+                        <a href="{% url 'login' %}" class="auth-link">تسجيل الدخول</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

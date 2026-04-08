@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}لوحة الطبيب | طبيبك{% endblock %}
+
+{% block content %}
+
+<style>
+    :root{
+        --primary:#0F4C81;
+        --primary-dark:#0A355A;
+        --secondary:#14B8A6;
+        --bg:#F8FAFC;
+        --bg-soft:#F1F7FB;
+        --text:#1E293B;
+        --muted:#64748B;
+        --border:#E2E8F0;
+        --shadow:0 18px 40px rgba(15,76,129,.08);
+        --shadow-soft:0 10px 25px rgba(15,76,129,.05);
+        --success:#16A34A;
+        --warning:#F59E0B;
+        --danger:#DC2626;
+    }
+
+    body{
+        font-family:'Cairo',sans-serif;
+        background:var(--bg);
+        color:var(--text);
+    }
+
+    .dashboard-section{
+        padding:120px 0 80px;
+        min-height:100vh;
+        background:
+            radial-gradient(circle at top right, rgba(20,184,166,.12), transparent 24%),
+            radial-gradient(circle at left center, rgba(15,76,129,.10), transparent 18%),
+            linear-gradient(180deg,#ffffff 0%, #f8fbfd 100%);
+    }
+
+    .welcome-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:30px;
+        padding:30px;
+        box-shadow:var(--shadow);
+        margin-bottom:24px;
+    }
+
+    .welcome-badge{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        background:rgba(15,76,129,.08);
+        color:var(--primary);
+        padding:10px 16px;
+        border-radius:999px;
+        font-weight:800;
+        margin-bottom:16px;
+    }
+
+    .welcome-title{
+        font-size:2rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:8px;
+    }
+
+    .welcome-subtitle{
+        color:var(--muted);
+        line-height:1.9;
+        margin-bottom:0;
+    }
+
+    .stat-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:24px;
+        padding:24px;
+        box-shadow:var(--shadow-soft);
+        height:100%;
+    }
+
+    .stat-label{
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:10px;
+    }
+
+    .stat-value{
+        font-size:2rem;
+        font-weight:800;
+        color:var(--primary-dark);
+    }
+
+    .stat-icon{
+        width:58px;
+        height:58px;
+        border-radius:18px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:1.4rem;
+        margin-bottom:16px;
+    }
+
+    .icon-primary{
+        background:rgba(15,76,129,.10);
+        color:var(--primary);
+    }
+
+    .icon-warning{
+        background:rgba(245,158,11,.12);
+        color:var(--warning);
+    }
+
+    .icon-success{
+        background:rgba(22,163,74,.12);
+        color:var(--success);
+    }
+
+    .icon-danger{
+        background:rgba(220,38,38,.10);
+        color:var(--danger);
+    }
+
+    .content-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:28px;
+        padding:24px;
+        box-shadow:var(--shadow-soft);
+        margin-top:24px;
+    }
+
+    .content-title{
+        font-size:1.3rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:18px;
+    }
+
+    .quick-actions{
+        display:flex;
+        flex-wrap:wrap;
+        gap:12px;
+    }
+
+    .btn-main{
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        border:none;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        text-decoration:none;
+        box-shadow:0 12px 24px rgba(15,76,129,.18);
+        transition:.25s;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .btn-main:hover{
+        color:#fff;
+        transform:translateY(-2px);
+    }
+
+    .btn-outline-main{
+        border:1.5px solid var(--primary);
+        color:var(--primary);
+        background:#fff;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        text-decoration:none;
+        transition:.25s;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .btn-outline-main:hover{
+        background:var(--primary);
+        color:#fff;
+    }
+
+    .btn-success-soft{
+        background:rgba(22,163,74,.12);
+        color:var(--success);
+        border:none;
+        border-radius:999px;
+        padding:8px 14px;
+        font-weight:800;
+        text-decoration:none;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .btn-success-soft:hover{
+        color:#fff;
+        background:var(--success);
+    }
+
+    .btn-danger-soft{
+        background:rgba(220,38,38,.10);
+        color:var(--danger);
+        border:none;
+        border-radius:999px;
+        padding:8px 14px;
+        font-weight:800;
+        text-decoration:none;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .btn-danger-soft:hover{
+        color:#fff;
+        background:var(--danger);
+    }
+
+    .table-responsive{
+        overflow-x:auto;
+    }
+
+    .custom-table{
+        width:100%;
+        border-collapse:separate;
+        border-spacing:0 12px;
+    }
+
+    .custom-table thead th{
+        color:var(--muted);
+        font-weight:800;
+        padding:0 16px 10px;
+        white-space:nowrap;
+    }
+
+    .custom-table tbody tr{
+        background:#fdfefe;
+        box-shadow:0 8px 18px rgba(15,76,129,.04);
+    }
+
+    .custom-table tbody td{
+        padding:18px 16px;
+        vertical-align:middle;
+        border-top:1px solid var(--border);
+        border-bottom:1px solid var(--border);
+        white-space:nowrap;
+    }
+
+    .custom-table tbody td:first-child{
+        border-right:1px solid var(--border);
+        border-top-right-radius:18px;
+        border-bottom-right-radius:18px;
+    }
+
+    .custom-table tbody td:last-child{
+        border-left:1px solid var(--border);
+        border-top-left-radius:18px;
+        border-bottom-left-radius:18px;
+    }
+
+    .status-badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:8px 14px;
+        border-radius:999px;
+        font-size:.84rem;
+        font-weight:800;
+    }
+
+    .status-pending{
+        background:rgba(245,158,11,.12);
+        color:var(--warning);
+    }
+
+    .status-confirmed{
+        background:rgba(22,163,74,.12);
+        color:var(--success);
+    }
+
+    .status-cancelled{
+        background:rgba(220,38,38,.10);
+        color:var(--danger);
+    }
+
+    .action-group{
+        display:flex;
+        gap:8px;
+        flex-wrap:wrap;
+    }
+
+    .empty-state{
+        text-align:center;
+        padding:30px 20px 10px;
+    }
+
+    .empty-state p{
+        color:var(--muted);
+        margin-bottom:18px;
+        line-height:1.9;
+    }
+
+    .notice-box{
+        background:#fff7ed;
+        border:1px solid #fdba74;
+        color:#9a3412;
+        padding:18px;
+        border-radius:20px;
+        font-weight:700;
+        line-height:1.9;
+    }
+
+    @media (max-width: 767.98px){
+        .dashboard-section{
+            padding-top:105px;
+        }
+
+        .welcome-title{
+            font-size:1.6rem;
+        }
+
+        .quick-actions{
+            flex-direction:column;
+        }
+
+        .quick-actions .btn-main,
+        .quick-actions .btn-outline-main{
+            width:100%;
+        }
+
+        .action-group{
+            flex-direction:column;
+        }
+    }
+</style>
+
+<section class="dashboard-section">
+    <div class="container">
+        {% if doctor %}
+            <div class="welcome-card">
+                <div class="welcome-badge">
+                    <i class="bi bi-person-vcard"></i>
+                    لوحة الطبيب
+                </div>
+                <h1 class="welcome-title">أهلاً د. {{ doctor.name }}</h1>
+                <p class="welcome-subtitle">
+                    يمكنك من هنا متابعة الحجوزات الواردة إليك ومراجعة حالة كل موعد بشكل سريع وواضح.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6 col-xl-3">
+                    <div class="stat-card">
+                        <div class="stat-icon icon-primary">
+                            <i class="bi bi-calendar2-check"></i>
+                        </div>
+                        <div class="stat-label">إجمالي الحجوزات</div>
+                        <div class="stat-value">{{ total_appointments }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-xl-3">
+                    <div class="stat-card">
+                        <div class="stat-icon icon-warning">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <div class="stat-label">قيد المراجعة</div>
+                        <div class="stat-value">{{ pending_appointments }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-xl-3">
+                    <div class="stat-card">
+                        <div class="stat-icon icon-success">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="stat-label">الحجوزات المؤكدة</div>
+                        <div class="stat-value">{{ confirmed_appointments }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-xl-3">
+                    <div class="stat-card">
+                        <div class="stat-icon icon-danger">
+                            <i class="bi bi-x-circle"></i>
+                        </div>
+                        <div class="stat-label">الحجوزات الملغية</div>
+                        <div class="stat-value">{{ cancelled_appointments }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h3 class="content-title">إجراءات سريعة</h3>
+                <div class="quick-actions">
+                    <a href="{% url 'appointment_list' %}" class="btn btn-main">عرض الحجوزات</a>
+                    <a href="{% url 'profile' %}" class="btn btn-outline-main">الملف الشخصي</a>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h3 class="content-title">آخر الحجوزات الواردة</h3>
+
+                {% if latest_appointments %}
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>المريض</th>
+                                    <th>نوع الاستشارة</th>
+                                    <th>التاريخ</th>
+                                    <th>الوقت</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appointment in latest_appointments %}
+                                <tr>
+                                    <td>{{ appointment.full_name }}</td>
+                                    <td>{{ appointment.get_consultation_type_display }}</td>
+                                    <td>{{ appointment.appointment_date }}</td>
+                                    <td>{{ appointment.appointment_time }}</td>
+                                    <td>
+                                        {% if appointment.status == "pending" %}
+                                            <span class="status-badge status-pending">قيد المراجعة</span>
+                                        {% elif appointment.status == "confirmed" %}
+                                            <span class="status-badge status-confirmed">مؤكد</span>
+                                        {% elif appointment.status == "cancelled" %}
+                                            <span class="status-badge status-cancelled">ملغي</span>
+                                        {% else %}
+                                            <span class="status-badge status-pending">{{ appointment.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="action-group">
+                                            <a href="{% url 'doctor_appointment_detail' appointment.id %}" class="btn-outline-main">
+                                                التفاصيل
+                                            </a>
+
+                                            <a href="{% url 'appointment_chat' appointment.id %}" class="btn-outline-main">
+                                                الشات
+                                            </a>
+
+                                            {% if appointment.status == "pending" %}
+                                                <a href="{% url 'doctor_update_appointment_status' appointment.id 'confirmed' %}" class="btn-success-soft">
+                                                    تأكيد
+                                                </a>
+                                                <a href="{% url 'doctor_update_appointment_status' appointment.id 'cancelled' %}" class="btn-danger-soft">
+                                                    إلغاء
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <p>لا توجد حجوزات مرتبطة بك حالياً.</p>
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="welcome-card">
+                <div class="notice-box">
+                    هذا الحساب مصنف كطبيب، لكن لم يتم ربطه بسجل طبيب داخل النظام بعد.
+                    <br>
+                    ادخل إلى لوحة الإدارة واربط هذا المستخدم بسجل الطبيب من نموذج الأطباء.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}
