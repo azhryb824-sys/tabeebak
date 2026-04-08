@@ -1,10 +1,9 @@
 from django.db import models
-from django.conf import settings
 
 
 class Doctor(models.Model):
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
+        "accounts.User",  # ✅ تم التعديل هنا
         on_delete=models.CASCADE,
         related_name="doctor_profile",
         blank=True,
