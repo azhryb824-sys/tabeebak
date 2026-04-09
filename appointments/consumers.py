@@ -1,12 +1,15 @@
 import json
 from datetime import timedelta
 from django.utils import timezone
+from django.apps import apps
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from doctors.models import Doctor
-from .models import Appointment, AppointmentMessage
+
+Doctor = apps.get_model("doctors", "Doctor")
+Appointment = apps.get_model("appointments", "Appointment")
+AppointmentMessage = apps.get_model("appointments", "AppointmentMessage")
 
 
 def _is_admin_user(user):
@@ -46,7 +49,7 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
-        except:
+        except Exception:
             return
 
         # =========================
