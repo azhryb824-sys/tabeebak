@@ -1,19 +1,27 @@
 import json
 from datetime import timedelta
-from django.utils import timezone
+
 from django.apps import apps
+from django.utils import timezone
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 
-Doctor = apps.get_model("doctors", "Doctor")
-Appointment = apps.get_model("appointments", "Appointment")
-AppointmentMessage = apps.get_model("appointments", "AppointmentMessage")
-
-
 def _is_admin_user(user):
     return getattr(user, "user_type", "") == "admin" or user.is_staff
+
+
+def get_doctor_model():
+    return apps.get_model("doctors", "Doctor")
+
+
+def get_appointment_model():
+    return apps.get_model("appointments", "Appointment")
+
+
+def get_appointment_message_model():
+    return apps.get_model("appointments", "AppointmentMessage")
 
 
 class AppointmentChatConsumer(AsyncWebsocketConsumer):
@@ -52,9 +60,6 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
         except Exception:
             return
 
-        # =========================
-        # 🎥 WebRTC SIGNALING
-        # =========================
         if data.get("event") in ["offer", "answer", "ice"]:
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -65,9 +70,6 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
             )
             return
 
-        # =========================
-        # 💬 CHAT
-        # =========================
         content = (data.get("message") or "").strip()
         if not content:
             return
@@ -100,26 +102,17 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
-    # =========================
-    # 🔥 SEND CHAT MESSAGE
-    # =========================
-
     async def broadcast_message(self, event):
         await self.send(text_data=json.dumps(event["data"]))
-
-    # =========================
-    # 🎥 SEND WEBRTC SIGNAL
-    # =========================
 
     async def webrtc_signal(self, event):
         await self.send(text_data=json.dumps(event["data"]))
 
-    # =========================
-    # ACCESS
-    # =========================
-
     @sync_to_async
     def user_can_access_appointment(self):
+        Appointment = get_appointment_model()
+        Doctor = get_doctor_model()
+
         try:
             appointment = Appointment.objects.select_related("patient", "doctor").get(id=self.appointment_id)
         except Appointment.DoesNotExist:
@@ -137,12 +130,11 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
 
         return False
 
-    # =========================
-    # TIMING
-    # =========================
-
     @sync_to_async
     def get_chat_timing_data(self):
+        Appointment = get_appointment_model()
+        AppointmentMessage = get_appointment_message_model()
+
         appointment = Appointment.objects.select_related("doctor").get(id=self.appointment_id)
 
         doctor_user = getattr(appointment.doctor, "user", None)
@@ -173,14 +165,12 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
             "remaining_seconds": remaining
         }
 
-    # =========================
-    # PERMISSION
-    # =========================
-
     @sync_to_async
     def can_send(self):
-        appointment = Appointment.objects.select_related("doctor", "patient").get(id=self.appointment_id)
+        Appointment = get_appointment_model()
+        Doctor = get_doctor_model()
 
+        appointment = Appointment.objects.select_related("doctor", "patient").get(id=self.appointment_id)
         timing = self.get_chat_timing_data_sync(appointment)
 
         if timing["chat_closed"]:
@@ -192,13 +182,14 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
         if is_doctor:
             return True, ""
 
-        if appointment.patient_id == self.user.id:
-            if not timing["doctor_started_chat"]:
-                return False, "انتظر حتى يبدأ الطبيب"
+        if appointment.patient_id == self.user.id and not timing["doctor_started_chat"]:
+            return False, "انتظر حتى يبدأ الطبيب"
 
         return True, ""
 
     def get_chat_timing_data_sync(self, appointment):
+        AppointmentMessage = get_appointment_message_model()
+
         doctor_user = getattr(appointment.doctor, "user", None)
 
         first = None
@@ -221,12 +212,12 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
             "chat_closed": timezone.now() > expires,
         }
 
-    # =========================
-    # SAVE MESSAGE
-    # =========================
-
     @sync_to_async
     def save_message(self, content):
+        Appointment = get_appointment_model()
+        AppointmentMessage = get_appointment_message_model()
+        Doctor = get_doctor_model()
+
         appointment = Appointment.objects.get(id=self.appointment_id)
 
         msg = AppointmentMessage.objects.create(
@@ -240,7 +231,6 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
         doctor = Doctor.objects.filter(user=self.user).first()
         if doctor and appointment.doctor_id == doctor.id:
             sender_type = "doctor"
-
         elif _is_admin_user(self.user):
             sender_type = "admin"
 
