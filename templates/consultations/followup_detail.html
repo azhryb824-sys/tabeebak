@@ -401,37 +401,43 @@
             <div class="section-box">
                 <div class="section-title">بيانات الاستشارة الأصلية</div>
 
-                <div class="info-grid">
-                    <div class="info-item">
-                        <small>اسم المريض</small>
-                        <strong>{{ followup.appointment.full_name }}</strong>
-                    </div>
+                {% if followup.appointment %}
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <small>اسم المريض</small>
+                            <strong>{{ followup.appointment.full_name }}</strong>
+                        </div>
 
-                    <div class="info-item">
-                        <small>الطبيب</small>
-                        <strong>{{ followup.doctor.name }}</strong>
-                    </div>
+                        <div class="info-item">
+                            <small>الطبيب</small>
+                            <strong>{{ followup.doctor.name }}</strong>
+                        </div>
 
-                    <div class="info-item">
-                        <small>نوع الاستشارة الأصلية</small>
-                        <strong>{{ followup.appointment.get_consultation_type_display }}</strong>
-                    </div>
+                        <div class="info-item">
+                            <small>نوع الاستشارة الأصلية</small>
+                            <strong>{{ followup.appointment.get_consultation_type_display }}</strong>
+                        </div>
 
-                    <div class="info-item">
-                        <small>تاريخ الاستشارة</small>
-                        <strong>{{ followup.appointment.appointment_date }}</strong>
-                    </div>
+                        <div class="info-item">
+                            <small>تاريخ الاستشارة</small>
+                            <strong>{{ followup.appointment.appointment_date }}</strong>
+                        </div>
 
-                    <div class="info-item">
-                        <small>وقت الاستشارة</small>
-                        <strong>{{ followup.appointment.appointment_time }}</strong>
-                    </div>
+                        <div class="info-item">
+                            <small>وقت الاستشارة</small>
+                            <strong>{{ followup.appointment.appointment_time }}</strong>
+                        </div>
 
-                    <div class="info-item">
-                        <small>حالة الجلسة</small>
-                        <strong>{{ followup.appointment.get_session_status_display }}</strong>
+                        <div class="info-item">
+                            <small>حالة الجلسة</small>
+                            <strong>{{ followup.appointment.get_session_status_display }}</strong>
+                        </div>
                     </div>
-                </div>
+                {% else %}
+                    <div class="note-box">
+                        الاستشارة الأصلية غير موجودة أو لم تعد مرتبطة بهذه المتابعة.
+                    </div>
+                {% endif %}
             </div>
 
             <div class="section-box">
@@ -451,7 +457,7 @@
             <div class="section-box">
                 <div class="section-title">مرفقات المتابعة</div>
 
-                {% if followup.attachments.all %}
+                {% if followup.attachments.all|length %}
                     <div class="attachments-list">
                         {% for attachment in followup.attachments.all %}
                             <div class="attachment-item">
@@ -519,7 +525,10 @@
                 {% endif %}
 
                 <a href="{% url 'consultations:followup_list' %}" class="btn-outline-main">العودة إلى القائمة</a>
-                <a href="{% url 'appointment_detail' followup.appointment.id %}" class="btn-outline-main">العودة إلى تفاصيل الاستشارة</a>
+
+                {% if followup.appointment %}
+                    <a href="{% url 'appointment_detail' followup.appointment.id %}" class="btn-outline-main">العودة إلى تفاصيل الاستشارة</a>
+                {% endif %}
             </div>
         </div>
     </div>
