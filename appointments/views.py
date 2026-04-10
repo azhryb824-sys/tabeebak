@@ -9,10 +9,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from doctors.models import Doctor
+from consultations.models import FollowUp
 
 from .forms import AppointmentForm, AttachmentUploadForm
 from .models import Appointment, AppointmentAttachment, AppointmentMessage
-
 
 from .models import Appointment, DoctorReview
 from .forms import DoctorReviewForm
@@ -73,7 +73,7 @@ def _get_chat_timing_data(appointment):
             "doctor_started_chat": False,
             "started_at": None,
             "expires_at": None,
-            "chat_open": True,   # مفتوح للطبيب ليبدأ
+            "chat_open": True,
             "chat_closed": False,
             "remaining_seconds": None,
         }
@@ -114,15 +114,12 @@ def _can_user_send_message(user, appointment):
     if timing["chat_closed"]:
         return False, "انتهت مدة المحادثة (15 دقيقة)."
 
-    # الأدمن يتبع نفس حالة الجلسة فقط
     if is_admin:
         return True, ""
 
-    # الطبيب هو من يبدأ
     if is_doctor:
         return True, ""
 
-    # المريض لا يبدأ المحادثة
     if is_patient and not timing["doctor_started_chat"]:
         return False, "لا يمكنك إرسال رسالة قبل أن يبدأ الطبيب المحادثة."
 
@@ -224,7 +221,7 @@ def appointment_list(request):
 @login_required
 def appointment_detail(request, appointment_id):
     appointment = get_object_or_404(
-        Appointment.objects.select_related("doctor", "patient").prefetch_related("attachments"),
+        Appointment.objects.select_related("doctor", "patient").prefetch_related("attachments", "followups"),
         id=appointment_id,
     )
 
@@ -235,6 +232,10 @@ def appointment_detail(request, appointment_id):
     upload_form = AttachmentUploadForm()
     chat_timing = _get_chat_timing_data(appointment)
 
+    followups = appointment.followups.all().order_by("-created_at")
+    can_create_followup = FollowUp.can_create_for_appointment(appointment)
+    followup_deadline = FollowUp.get_followup_deadline_for_appointment(appointment)
+
     return render(
         request,
         "appointments/appointment_detail.html",
@@ -242,6 +243,41 @@ def appointment_detail(request, appointment_id):
             "appointment": appointment,
             "upload_form": upload_form,
             "chat_timing": chat_timing,
+            "followups": followups,
+            "can_create_followup": can_create_followup,
+            "followup_deadline": followup_deadline,
+        },
+    )
+
+
+@login_required
+def doctor_appointment_detail(request, pk):
+    appointment = get_object_or_404(
+        Appointment.objects.select_related("doctor", "patient").prefetch_related("attachments", "followups"),
+        id=pk,
+    )
+
+    if not _user_can_access_appointment_sync(request.user, appointment):
+        messages.error(request, "ليس لديك صلاحية للوصول إلى هذا الموعد.")
+        return redirect("appointment_list")
+
+    upload_form = AttachmentUploadForm()
+    chat_timing = _get_chat_timing_data(appointment)
+
+    followups = appointment.followups.all().order_by("-created_at")
+    can_create_followup = FollowUp.can_create_for_appointment(appointment)
+    followup_deadline = FollowUp.get_followup_deadline_for_appointment(appointment)
+
+    return render(
+        request,
+        "appointments/doctor_appointment_detail.html",
+        {
+            "appointment": appointment,
+            "upload_form": upload_form,
+            "chat_timing": chat_timing,
+            "followups": followups,
+            "can_create_followup": can_create_followup,
+            "followup_deadline": followup_deadline,
         },
     )
 
@@ -290,7 +326,6 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
-        # إرسال حالة المحادثة مباشرة عند الاتصال
         timing = await self.get_chat_timing_data()
         await self.send(
             text_data=json.dumps(
@@ -472,6 +507,8 @@ def appointment_chat(request, appointment_id):
             "send_error_message": send_error_message,
         },
     )
+
+
 @login_required
 def submit_doctor_review(request, appointment_id):
     appointment = get_object_or_404(
