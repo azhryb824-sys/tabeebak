@@ -221,3 +221,23 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
             "sender": self.user.username,
             "sender_type": sender_type,
         }
+        @login_required
+def appointment_list(request):
+    appointments = Appointment.objects.select_related("doctor", "patient")
+
+    if not _is_admin_user(request.user):
+        doctor = _get_doctor_for_user(request.user)
+        if doctor:
+            appointments = appointments.filter(doctor=doctor)
+        else:
+            appointments = appointments.filter(patient=request.user)
+
+    appointments = appointments.order_by("-id")
+
+    return render(
+        request,
+        "appointments/appointment_list.html",
+        {
+            "appointments": appointments,
+        },
+    )
