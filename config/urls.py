@@ -10,6 +10,7 @@ urlpatterns = [
     path("doctors/", include("doctors.urls")),
     path("appointments/", include("appointments.urls")),
     path("dashboard/", include("dashboard.urls")),
+    path("consultations/", include("consultations.urls")),
 ]
 
 if settings.DEBUG:
