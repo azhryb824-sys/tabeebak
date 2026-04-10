@@ -806,9 +806,11 @@
     let mediaRecorder = null;
     let recordedChunks = [];
     let isRecording = false;
+
     const appointmentId = "{{ appointment.id }}";
     const isDoctorStarted = {{ chat_timing.doctor_started_chat|yesno:"true,false" }};
     const isChatClosedInitially = {{ chat_timing.chat_closed|yesno:"true,false" }};
+    const isDoctor = {{ request.user == appointment.doctor.user|yesno:"true,false" }};
     let currentUserCanSend = {{ current_user_can_send|yesno:"true,false" }};
     let remainingSeconds = {% if chat_timing.remaining_seconds != None %}{{ chat_timing.remaining_seconds }}{% else %}null{% endif %};
 
@@ -906,12 +908,17 @@
         if (!doctorStartedChat) {
             sessionStatusBox.className = "status-box warning";
             sessionStatusBox.textContent = "لم يبدأ الطبيب المحادثة بعد. يبدأ مؤقت 15 دقيقة عند إرسال أول رسالة من الطبيب.";
-            liveBadge.textContent = "بانتظار بدء الطبيب";
+            liveBadge.textContent = "بانتظار الطبيب";
             countdownText.textContent = "--:--";
 
-            if (!currentUserCanSend) {
+            if (!isDoctor) {
                 sendButton.disabled = true;
                 messageInput.disabled = true;
+                formNote.textContent = "بانتظار أن يبدأ الطبيب المحادثة أولاً.";
+            } else {
+                sendButton.disabled = false;
+                messageInput.disabled = false;
+                formNote.textContent = "أرسل أول رسالة لبدء جلسة المتابعة لمدة 15 دقيقة.";
             }
             return;
         }
@@ -919,6 +926,7 @@
         sessionStatusBox.className = "status-box success";
         sessionStatusBox.textContent = "الجلسة نشطة حالياً. يمكنك تبادل الرسائل حتى انتهاء المؤقت.";
         liveBadge.textContent = "الجلسة نشطة";
+        formNote.textContent = "يمكنك إرسال الرسائل أثناء فترة الجلسة النشطة فقط.";
 
         if (currentUserCanSend) {
             sendButton.disabled = false;
@@ -1082,6 +1090,11 @@
                 return;
             }
 
+            if (!doctorStartedChat) {
+                showAlert("يمكن بدء المكالمة بعد أن يبدأ الطبيب المحادثة أولاً.", "warning");
+                return;
+            }
+
             if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
                 showAlert("الاتصال غير جاهز حالياً.", "danger");
                 return;
@@ -1154,9 +1167,7 @@
     }
 
     function endCall() {
-
-        stopRecording(); // 🔥 إيقاف التسجيل تلقائياً
-
+        stopRecording();
         reconnectingCall = false;
 
         if (peerConnection) {
@@ -1171,19 +1182,16 @@
 
         localVideo.srcObject = null;
         remoteVideo.srcObject = null;
-
         videoStatusText.textContent = "🔴 تم إنهاء المكالمة";
     }
 
     function startRecording() {
-
         if (!localStream) {
             showAlert("ابدأ المكالمة أولاً", "warning");
             return;
         }
 
         try {
-
             recordedChunks = [];
 
             mediaRecorder = new MediaRecorder(localStream, {
@@ -1202,7 +1210,6 @@
             };
 
             mediaRecorder.onstop = function () {
-
                 isRecording = false;
 
                 if (recordedChunks.length === 0) {
@@ -1211,7 +1218,6 @@
                 }
 
                 const blob = new Blob(recordedChunks, { type: "video/webm" });
-
                 const url = URL.createObjectURL(blob);
 
                 const a = document.createElement("a");
@@ -1251,12 +1257,12 @@
             const data = JSON.parse(e.data);
             console.log("WS:", data);
 
-            if (data.event === "error") {
+            if (data.event === "error" || data.type === "error") {
                 showAlert(data.message || "تعذر إرسال الرسالة.", "danger");
                 return;
             }
 
-            if (data.event === "chat_status") {
+            if (data.event === "chat_status" || data.type === "chat_status") {
                 doctorStartedChat = !!data.doctor_started_chat;
                 chatClosed = !!data.chat_closed;
                 remainingSeconds = data.remaining_seconds;
@@ -1265,7 +1271,7 @@
                 return;
             }
 
-            if (data.event === "chat_message") {
+            if (data.event === "chat_message" || data.type === "chat_message") {
                 appendMessage(
                     data.sender || "مستخدم",
                     data.sender_type || "patient",
