@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from appointments.models import Appointment
 from .forms import FollowUpAttachmentForm, FollowUpForm
@@ -10,6 +11,34 @@ from .models import FollowUp
 
 def _is_admin_user(user):
     return getattr(user, "user_type", "") == "admin" or user.is_staff
+
+
+def _validate_followup_creation_access(request, appointment):
+    """
+    التحقق من صلاحية إنشاء متابعة على استشارة معينة.
+    يرجع None إذا كل شيء صحيح.
+    ويرجع redirect response إذا يوجد سبب يمنع الإنشاء.
+    """
+
+    # المتابعة للمريض فقط
+    if appointment.patient_id != request.user.id and not _is_admin_user(request.user):
+        messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
+        return redirect("appointment_detail", appointment_id=appointment.pk)
+
+    # لازم الاستشارة تكون مكتملة
+    if appointment.session_status != "completed":
+        messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
+        return redirect("appointment_detail", appointment_id=appointment.pk)
+
+    # منع المتابعة بعد 14 يوم
+    if not FollowUp.can_create_for_appointment(appointment):
+        messages.error(
+            request,
+            "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد طلب استشارة جديدة."
+        )
+        return redirect("appointment_detail", appointment_id=appointment.pk)
+
+    return None
 
 
 def followup_list(request):
@@ -123,23 +152,9 @@ def followup_create(request):
             messages.error(request, "الاستشارة الأصلية غير موجودة.")
             return redirect("consultations:followup_list")
 
-        # المتابعة للمريض فقط
-        if selected_appointment.patient_id != request.user.id and not _is_admin_user(request.user):
-            messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
-            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
-
-        # لازم الاستشارة تكون مكتملة
-        if selected_appointment.session_status != "completed":
-            messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
-            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
-
-        # منع المتابعة بعد 14 يوم
-        if not FollowUp.can_create_for_appointment(selected_appointment):
-            messages.error(
-                request,
-                "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد طلب استشارة جديدة."
-            )
-            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
+        validation_response = _validate_followup_creation_access(request, selected_appointment)
+        if validation_response:
+            return validation_response
 
         form = FollowUpForm(
             request.POST,
@@ -157,14 +172,11 @@ def followup_create(request):
             # المرفق اختياري
             if request.FILES.get("file"):
                 if attachment_form.is_valid():
-                    attachment = attachment_form.save(
-                        commit=False
-                    )
+                    attachment = attachment_form.save(commit=False)
                     attachment.followup = followup
                     attachment.uploaded_by = request.user
                     attachment.save()
                 else:
-                    # المتابعة محفوظة لكن المرفق فيه مشكلة
                     messages.warning(
                         request,
                         "تم إنشاء المتابعة، لكن تعذر رفع المرفق. يرجى مراجعة نوع الملف أو حجمه."
@@ -198,25 +210,17 @@ def followup_create(request):
             pk=appointment_id
         )
 
-        # المتابعة للمريض فقط
-        if selected_appointment.patient_id != request.user.id and not _is_admin_user(request.user):
-            messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
-            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
-
-        # لازم الاستشارة تكون مكتملة
-        if selected_appointment.session_status != "completed":
-            messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
-            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
+        validation_response = _validate_followup_creation_access(request, selected_appointment)
+        if validation_response:
+            return validation_response
 
         is_followup_allowed = FollowUp.can_create_for_appointment(selected_appointment)
         deadline = FollowUp.get_followup_deadline_for_appointment(selected_appointment)
 
-        if not is_followup_allowed:
-            messages.error(
-                request,
-                "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد طلب استشارة جديدة."
-            )
-            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
+        # مهم:
+        # لا نستخدم تاريخ الاستشارة الأصلية هنا، لأن الفورم يمنع تاريخاً أقدم من اليوم.
+        # نبدأ بتاريخ اليوم ووقت الآن حتى لا تُرفض المتابعة من غير سبب.
+        now_local = timezone.localtime()
 
         initial_data = {
             "appointment": selected_appointment,
@@ -224,8 +228,8 @@ def followup_create(request):
             "doctor": selected_appointment.doctor,
             "method": selected_appointment.consultation_type,
             "status": "scheduled",
-            "followup_date": selected_appointment.appointment_date,
-            "followup_time": selected_appointment.appointment_time,
+            "followup_date": timezone.localdate(),
+            "followup_time": now_local.time().replace(second=0, microsecond=0),
         }
 
     form = FollowUpForm(
@@ -257,6 +261,10 @@ def followup_edit(request, pk):
     # فقط المريض صاحب المتابعة أو الأدمن يقدر يعدل
     if not is_admin and request.user != followup.patient:
         messages.error(request, "ليس لديك صلاحية لتعديل بيانات هذه المتابعة.")
+        return redirect("consultations:followup_detail", pk=followup.pk)
+
+    if followup.appointment.session_status != "completed":
+        messages.error(request, "لا يمكن تعديل المتابعة قبل اكتمال الاستشارة الأصلية.")
         return redirect("consultations:followup_detail", pk=followup.pk)
 
     if not FollowUp.can_create_for_appointment(followup.appointment):
@@ -317,22 +325,9 @@ def followup_create_from_appointment(request, appointment_id):
         pk=appointment_id
     )
 
-    # المتابعة للمريض فقط
-    if appointment.patient_id != request.user.id and not _is_admin_user(request.user):
-        messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
-        return redirect("appointment_detail", appointment_id=appointment.pk)
-
-    # لازم الاستشارة تكون مكتملة
-    if appointment.session_status != "completed":
-        messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
-        return redirect("appointment_detail", appointment_id=appointment.pk)
-
-    if not FollowUp.can_create_for_appointment(appointment):
-        messages.error(
-            request,
-            "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد طلب استشارة جديدة."
-        )
-        return redirect("appointment_detail", appointment_id=appointment.pk)
+    validation_response = _validate_followup_creation_access(request, appointment)
+    if validation_response:
+        return validation_response
 
     return redirect(f"/consultations/followups/create/?appointment={appointment.pk}")
 
