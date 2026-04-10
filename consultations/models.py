@@ -124,15 +124,28 @@ class FollowUp(models.Model):
         return appointment_dt
 
     @property
+    def session_end_datetime(self):
+        """
+        نهاية الجلسة الفعلية:
+        - نعتمد أولاً على chat_expires_at إن وجدت
+        - وإلا نرجع لتاريخ ووقت الاستشارة الأصلية كخطة بديلة
+        """
+        chat_expires_at = getattr(self.appointment, "chat_expires_at", None)
+        if chat_expires_at:
+            return chat_expires_at
+
+        return self.appointment_datetime_aware
+
+    @property
     def followup_deadline(self):
         """
         آخر وقت مسموح فيه بإنشاء متابعة:
-        بعد 14 يوم من وقت الاستشارة الأصلية.
+        بعد 14 يوم من نهاية الجلسة الفعلية.
         """
-        appointment_dt = self.appointment_datetime_aware
-        if not appointment_dt:
+        session_end = self.session_end_datetime
+        if not session_end:
             return None
-        return appointment_dt + timedelta(days=14)
+        return session_end + timedelta(days=14)
 
     @property
     def is_followup_allowed(self):
@@ -173,31 +186,36 @@ class FollowUp(models.Model):
         دالة عامة تفحص هل يمكن إنشاء متابعة لهذا الموعد.
         الشروط:
         - وجود الموعد
-        - وجود تاريخ ووقت
         - الجلسة الأصلية مكتملة
-        - المدة لم تتجاوز 14 يوم
+        - المدة لم تتجاوز 14 يوم من نهاية الجلسة الفعلية
         """
         if not appointment:
             return False
 
-        if not appointment.appointment_date or not appointment.appointment_time:
-            return False
-
+        # لازم الجلسة تكون مكتملة
         if appointment.session_status != "completed":
             return False
 
-        appointment_dt = datetime.combine(
-            appointment.appointment_date,
-            appointment.appointment_time
-        )
+        # نعتمد أولاً على نهاية الجلسة الفعلية
+        session_end = getattr(appointment, "chat_expires_at", None)
 
-        if timezone.is_naive(appointment_dt):
-            appointment_dt = timezone.make_aware(
-                appointment_dt,
-                timezone.get_current_timezone()
+        # fallback إذا ما كان في chat_expires_at
+        if not session_end:
+            if not appointment.appointment_date or not appointment.appointment_time:
+                return False
+
+            session_end = datetime.combine(
+                appointment.appointment_date,
+                appointment.appointment_time
             )
 
-        deadline = appointment_dt + timedelta(days=14)
+            if timezone.is_naive(session_end):
+                session_end = timezone.make_aware(
+                    session_end,
+                    timezone.get_current_timezone()
+                )
+
+        deadline = session_end + timedelta(days=14)
         return timezone.now() <= deadline
 
     @classmethod
@@ -208,21 +226,24 @@ class FollowUp(models.Model):
         if not appointment:
             return None
 
-        if not appointment.appointment_date or not appointment.appointment_time:
-            return None
+        session_end = getattr(appointment, "chat_expires_at", None)
 
-        appointment_dt = datetime.combine(
-            appointment.appointment_date,
-            appointment.appointment_time
-        )
+        if not session_end:
+            if not appointment.appointment_date or not appointment.appointment_time:
+                return None
 
-        if timezone.is_naive(appointment_dt):
-            appointment_dt = timezone.make_aware(
-                appointment_dt,
-                timezone.get_current_timezone()
+            session_end = datetime.combine(
+                appointment.appointment_date,
+                appointment.appointment_time
             )
 
-        return appointment_dt + timedelta(days=14)
+            if timezone.is_naive(session_end):
+                session_end = timezone.make_aware(
+                    session_end,
+                    timezone.get_current_timezone()
+                )
+
+        return session_end + timedelta(days=14)
 
     def clean(self):
         """
