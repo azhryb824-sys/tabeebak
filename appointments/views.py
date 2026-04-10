@@ -13,7 +13,6 @@ from consultations.models import FollowUp
 
 from .forms import AppointmentForm, AttachmentUploadForm
 from .models import Appointment, AppointmentAttachment, AppointmentMessage
-
 from .models import Appointment, DoctorReview
 from .forms import DoctorReviewForm
 
@@ -62,35 +61,56 @@ def _get_first_doctor_message(appointment):
 
 def _get_chat_timing_data(appointment):
     """
-    الطبيب هو من يبدأ الشات.
-    أول رسالة من الطبيب = بداية الجلسة.
-    مدة الجلسة 15 دقيقة من وقت أول رسالة للطبيب.
+    منطق الشات:
+    - الطبيب هو من يبدأ الشات.
+    - عند أول رسالة من الطبيب تبدأ جلسة 15 دقيقة.
+    - عند عمل متابعة يمكن إعادة فتح نفس الشات عبر reset_chat_session().
+    - إذا كانت chat_started_at محفوظة في Appointment نعتمد عليها مباشرة.
+    - fallback للرسائل القديمة قبل إضافة الحقول: أول رسالة من الطبيب.
     """
-    first_doctor_message = _get_first_doctor_message(appointment)
+    now = timezone.now()
 
-    if not first_doctor_message:
+    # الحالة الجديدة المعتمدة على حقول الموعد
+    if appointment.chat_started_at:
+        started_at = appointment.chat_started_at
+        expires_at = appointment.chat_expires_at or (started_at + timedelta(minutes=15))
+        chat_closed = now > expires_at
+        remaining_seconds = max(int((expires_at - now).total_seconds()), 0)
+
         return {
-            "doctor_started_chat": False,
-            "started_at": None,
-            "expires_at": None,
-            "chat_open": True,
-            "chat_closed": False,
-            "remaining_seconds": None,
+            "doctor_started_chat": True,
+            "started_at": started_at,
+            "expires_at": expires_at,
+            "chat_open": not chat_closed,
+            "chat_closed": chat_closed,
+            "remaining_seconds": remaining_seconds,
         }
 
-    started_at = first_doctor_message.created_at
-    expires_at = started_at + timedelta(minutes=15)
-    now = timezone.now()
-    chat_closed = now > expires_at
-    remaining_seconds = max(int((expires_at - now).total_seconds()), 0)
+    # fallback للبيانات القديمة إذا كان الطبيب بدأ سابقاً قبل إضافة الحقول
+    first_doctor_message = _get_first_doctor_message(appointment)
+    if first_doctor_message:
+        started_at = first_doctor_message.created_at
+        expires_at = started_at + timedelta(minutes=15)
+        chat_closed = now > expires_at
+        remaining_seconds = max(int((expires_at - now).total_seconds()), 0)
 
+        return {
+            "doctor_started_chat": True,
+            "started_at": started_at,
+            "expires_at": expires_at,
+            "chat_open": not chat_closed,
+            "chat_closed": chat_closed,
+            "remaining_seconds": remaining_seconds,
+        }
+
+    # الطبيب لم يبدأ بعد
     return {
-        "doctor_started_chat": True,
-        "started_at": started_at,
-        "expires_at": expires_at,
-        "chat_open": not chat_closed,
-        "chat_closed": chat_closed,
-        "remaining_seconds": remaining_seconds,
+        "doctor_started_chat": False,
+        "started_at": None,
+        "expires_at": None,
+        "chat_open": True,
+        "chat_closed": False,
+        "remaining_seconds": None,
     }
 
 
@@ -99,7 +119,7 @@ def _can_user_send_message(user, appointment):
     القواعد:
     - الطبيب يستطيع بدء الشات
     - المريض لا يستطيع الإرسال قبل أول رسالة من الطبيب
-    - بعد مرور 15 دقيقة من أول رسالة للطبيب يمنع الإرسال على الجميع
+    - بعد مرور 15 دقيقة من بداية الجلسة يمنع الإرسال على الجميع
     """
     if not _user_can_access_appointment_sync(user, appointment):
         return False, "ليس لديك صلاحية للوصول إلى هذه المحادثة."
@@ -270,7 +290,7 @@ def doctor_appointment_detail(request, pk):
 
     return render(
         request,
-        "appointments/doctor_appointment_detail.html",
+        "appointments/appointment_detail.html",
         {
             "appointment": appointment,
             "upload_form": upload_form,
@@ -440,18 +460,25 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
     def save_message(self, content):
         appointment = Appointment.objects.select_related("doctor").get(id=self.appointment_id)
 
-        msg = AppointmentMessage.objects.create(
-            appointment=appointment,
-            sender=self.user,
-            content=content,
-        )
-
         sender_type = "patient"
         doctor = Doctor.objects.filter(user=self.user).first()
         if doctor and appointment.doctor_id == doctor.id:
             sender_type = "doctor"
         elif _is_admin_user(self.user):
             sender_type = "admin"
+
+        # الطبيب فقط يبدأ الجلسة الجديدة
+        if sender_type == "doctor":
+            if not appointment.chat_started_at or (
+                appointment.chat_expires_at and timezone.now() > appointment.chat_expires_at
+            ):
+                appointment.start_chat_session()
+
+        msg = AppointmentMessage.objects.create(
+            appointment=appointment,
+            sender=self.user,
+            content=content,
+        )
 
         return {
             "content": msg.content,
@@ -521,25 +548,13 @@ def submit_doctor_review(request, appointment_id):
         messages.warning(request, "لقد قمت بتقييم هذه الجلسة مسبقاً.")
         return redirect("appointment_detail", appointment_id=appointment.id)
 
-    doctor_user = getattr(appointment.doctor, "user", None)
-    first_doctor_message = None
+    chat_timing = _get_chat_timing_data(appointment)
 
-    if doctor_user:
-        first_doctor_message = (
-            AppointmentMessage.objects
-            .filter(appointment=appointment, sender=doctor_user)
-            .order_by("created_at", "id")
-            .first()
-        )
-
-    if not first_doctor_message:
+    if not chat_timing["doctor_started_chat"]:
         messages.error(request, "لا يمكنك تقييم الطبيب قبل بدء الجلسة.")
         return redirect("appointment_chat", appointment_id=appointment.id)
 
-    expires_at = first_doctor_message.created_at + timedelta(minutes=15)
-    chat_closed = timezone.now() > expires_at
-
-    if not chat_closed:
+    if not chat_timing["chat_closed"]:
         messages.error(request, "لا يمكنك التقييم قبل انتهاء الجلسة.")
         return redirect("appointment_chat", appointment_id=appointment.id)
 
