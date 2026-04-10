@@ -59,6 +59,58 @@ def _get_first_doctor_message(appointment):
     )
 
 
+def _get_original_appointment_for_followups(appointment):
+    """
+    ترجع الاستشارة الأصلية المرتبطة بالموعد الحالي إن وجدت.
+    لو الموعد نفسه هو الأصل ترجع نفس الموعد.
+    تم تصميمها بشكل مرن حتى لا تكسر المشروع لو اختلفت أسماء العلاقات.
+    """
+    if not appointment:
+        return None
+
+    # الحالة الطبيعية: الموعد نفسه هو الاستشارة الأصلية
+    original_appointment = appointment
+
+    # لو في علاقة مباشرة محتملة باسم original_appointment
+    direct_original = getattr(appointment, "original_appointment", None)
+    if direct_original:
+        return direct_original
+
+    # لو في علاقة followup/consultation مرتبطة بالموعد الحالي
+    possible_followup_attrs = [
+        "followup",
+        "follow_up",
+        "consultation_followup",
+        "appointment_followup",
+    ]
+
+    for attr_name in possible_followup_attrs:
+        related_obj = getattr(appointment, attr_name, None)
+        if related_obj:
+            rel_original = getattr(related_obj, "original_appointment", None)
+            if rel_original:
+                return rel_original
+
+            rel_original = getattr(related_obj, "appointment", None)
+            if rel_original:
+                return rel_original
+
+    # محاولة من موديل FollowUp نفسه
+    try:
+        followup_obj = (
+            FollowUp.objects
+            .filter(appointment=appointment)
+            .select_related("original_appointment")
+            .first()
+        )
+        if followup_obj and getattr(followup_obj, "original_appointment", None):
+            return followup_obj.original_appointment
+    except Exception:
+        pass
+
+    return original_appointment
+
+
 def _get_chat_timing_data(appointment):
     """
     منطق الشات:
@@ -255,6 +307,7 @@ def appointment_detail(request, appointment_id):
     followups = appointment.followups.all().order_by("-created_at")
     can_create_followup = FollowUp.can_create_for_appointment(appointment)
     followup_deadline = FollowUp.get_followup_deadline_for_appointment(appointment)
+    original_appointment = _get_original_appointment_for_followups(appointment)
 
     return render(
         request,
@@ -266,6 +319,8 @@ def appointment_detail(request, appointment_id):
             "followups": followups,
             "can_create_followup": can_create_followup,
             "followup_deadline": followup_deadline,
+            "original_appointment": original_appointment,
+            "original_appointment_id": getattr(original_appointment, "id", None),
         },
     )
 
@@ -287,6 +342,7 @@ def doctor_appointment_detail(request, pk):
     followups = appointment.followups.all().order_by("-created_at")
     can_create_followup = FollowUp.can_create_for_appointment(appointment)
     followup_deadline = FollowUp.get_followup_deadline_for_appointment(appointment)
+    original_appointment = _get_original_appointment_for_followups(appointment)
 
     return render(
         request,
@@ -298,6 +354,8 @@ def doctor_appointment_detail(request, pk):
             "followups": followups,
             "can_create_followup": can_create_followup,
             "followup_deadline": followup_deadline,
+            "original_appointment": original_appointment,
+            "original_appointment_id": getattr(original_appointment, "id", None),
         },
     )
 
@@ -504,6 +562,7 @@ def appointment_chat(request, appointment_id):
     chat_timing = _get_chat_timing_data(appointment)
 
     current_user_can_send, send_error_message = _can_user_send_message(request.user, appointment)
+    original_appointment = _get_original_appointment_for_followups(appointment)
 
     prepared_messages = []
     for msg in messages_qs:
@@ -532,6 +591,8 @@ def appointment_chat(request, appointment_id):
             "chat_timing": chat_timing,
             "current_user_can_send": current_user_can_send,
             "send_error_message": send_error_message,
+            "original_appointment": original_appointment,
+            "original_appointment_id": getattr(original_appointment, "id", None),
         },
     )
 
