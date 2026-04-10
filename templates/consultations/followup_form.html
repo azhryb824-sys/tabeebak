@@ -372,17 +372,23 @@
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
+                    {% if selected_appointment %}
+                        <input type="hidden" name="appointment" value="{{ selected_appointment.id }}">
+                    {% endif %}
+
                     <div class="form-grid">
-                        <div class="field-group">
-                            <label class="form-label">{{ form.appointment.label }}</label>
-                            {{ form.appointment }}
-                            {% if form.appointment.help_text %}
-                                <div class="help-text">{{ form.appointment.help_text }}</div>
-                            {% endif %}
-                            {% if form.appointment.errors %}
-                                <div class="error-list">{{ form.appointment.errors }}</div>
-                            {% endif %}
-                        </div>
+                        {% if not selected_appointment %}
+                            <div class="field-group">
+                                <label class="form-label">{{ form.appointment.label }}</label>
+                                {{ form.appointment }}
+                                {% if form.appointment.help_text %}
+                                    <div class="help-text">{{ form.appointment.help_text }}</div>
+                                {% endif %}
+                                {% if form.appointment.errors %}
+                                    <div class="error-list">{{ form.appointment.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
 
                         <div class="field-group">
                             <label class="form-label">{{ form.patient.label }}</label>
