@@ -175,6 +175,11 @@
         resize:vertical;
     }
 
+    input[type="file"]{
+        padding:10px 12px;
+        background:#fff;
+    }
+
     .help-text{
         color:var(--muted);
         font-size:.9rem;
@@ -191,6 +196,28 @@
     .error-list ul{
         margin:0;
         padding-right:18px;
+    }
+
+    .attachment-box{
+        margin-top:22px;
+        border:1px dashed #cbd5e1;
+        border-radius:22px;
+        padding:18px;
+        background:#f8fbfd;
+    }
+
+    .attachment-title{
+        font-size:1rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:10px;
+    }
+
+    .attachment-subtitle{
+        color:var(--muted);
+        line-height:1.9;
+        margin-bottom:14px;
+        font-size:.95rem;
     }
 
     .actions{
@@ -314,7 +341,7 @@
                     </div>
                 {% else %}
                     <div class="notice-box notice-danger">
-                        انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة جديدة إلا بعد حجز استشارة جديدة.
+                        انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة جديدة إلا بعد طلب استشارة جديدة.
                     </div>
                 {% endif %}
             {% else %}
@@ -331,10 +358,18 @@
                 </div>
             {% endif %}
 
+            {% if attachment_form and attachment_form.non_field_errors %}
+                <div class="notice-box notice-danger">
+                    {% for error in attachment_form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
             <div class="form-shell">
                 <div class="form-section-title">بيانات المتابعة</div>
 
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
                     <div class="form-grid">
@@ -437,6 +472,36 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    {% if attachment_form %}
+                        <div class="attachment-box">
+                            <div class="attachment-title">إرفاق مستندات أو صور طبية (اختياري)</div>
+                            <div class="attachment-subtitle">
+                                يمكنك إرفاق تقرير، وصفة، تحليل، أو صورة طبية لدعم المتابعة. هذا الحقل اختياري.
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="field-group">
+                                    <label class="form-label">{{ attachment_form.title.label }}</label>
+                                    {{ attachment_form.title }}
+                                    {% if attachment_form.title.errors %}
+                                        <div class="error-list">{{ attachment_form.title.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="field-group">
+                                    <label class="form-label">{{ attachment_form.file.label }}</label>
+                                    {{ attachment_form.file }}
+                                    {% if attachment_form.file.errors %}
+                                        <div class="error-list">{{ attachment_form.file.errors }}</div>
+                                    {% endif %}
+                                    <div class="help-text">
+                                        الأنواع المدعومة: صور، PDF، Word. الحد الأقصى: 10 ميجابايت.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
 
                     <div class="actions">
                         {% if is_followup_allowed == False %}
