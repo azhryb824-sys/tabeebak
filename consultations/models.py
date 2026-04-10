@@ -1,11 +1,12 @@
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 from appointments.models import Appointment
 from doctors.models import Doctor
-from django.conf import settings
 
 
 class FollowUp(models.Model):
@@ -116,7 +117,10 @@ class FollowUp(models.Model):
             return None
 
         if timezone.is_naive(appointment_dt):
-            return timezone.make_aware(appointment_dt, timezone.get_current_timezone())
+            return timezone.make_aware(
+                appointment_dt,
+                timezone.get_current_timezone()
+            )
         return appointment_dt
 
     @property
@@ -154,7 +158,6 @@ class FollowUp(models.Model):
         if remaining.total_seconds() <= 0:
             return 0
 
-        # نقرّبها للأعلى لو في كسور يوم
         return max(1, remaining.days if remaining.seconds == 0 else remaining.days + 1)
 
     @property
@@ -168,11 +171,19 @@ class FollowUp(models.Model):
     def can_create_for_appointment(cls, appointment):
         """
         دالة عامة تفحص هل يمكن إنشاء متابعة لهذا الموعد.
+        الشروط:
+        - وجود الموعد
+        - وجود تاريخ ووقت
+        - الجلسة الأصلية مكتملة
+        - المدة لم تتجاوز 14 يوم
         """
         if not appointment:
             return False
 
         if not appointment.appointment_date or not appointment.appointment_time:
+            return False
+
+        if appointment.session_status != "completed":
             return False
 
         appointment_dt = datetime.combine(
@@ -217,26 +228,33 @@ class FollowUp(models.Model):
         """
         حماية إضافية على مستوى الموديل:
         - تأكيد تطابق الطبيب والمريض مع الاستشارة الأصلية
+        - منع إنشاء متابعة قبل اكتمال الاستشارة
         - منع إنشاء متابعة بعد 14 يوم
         """
-        from django.core.exceptions import ValidationError
-
         errors = {}
 
         if self.appointment:
+            # المريض يجب أن يكون نفس مريض الاستشارة الأصلية
             if self.patient and self.appointment.patient and self.patient != self.appointment.patient:
                 errors["patient"] = "المريض المختار لا يطابق المريض الموجود في الاستشارة الأصلية."
 
+            # الطبيب يجب أن يكون نفس طبيب الاستشارة الأصلية
             if self.doctor and self.appointment.doctor and self.doctor != self.appointment.doctor:
                 errors["doctor"] = "الطبيب المختار لا يطابق الطبيب الموجود في الاستشارة الأصلية."
 
-            if not self.__class__.can_create_for_appointment(self.appointment):
-                errors["appointment"] = "انتهت مدة المتابعة لهذه الاستشارة، ويجب حجز استشارة جديدة."
+            # لا متابعة قبل اكتمال الجلسة
+            if self.appointment.session_status != "completed":
+                errors["appointment"] = "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية."
 
+            # لا متابعة بعد 14 يوم
+            elif not self.__class__.can_create_for_appointment(self.appointment):
+                errors["appointment"] = "انتهت مدة المتابعة لهذه الاستشارة، ويجب طلب استشارة جديدة."
+
+            # تاريخ المتابعة يجب أن يكون داخل المدة المسموحة
             if self.followup_date:
                 deadline = self.__class__.get_followup_deadline_for_appointment(self.appointment)
                 if deadline and self.followup_date > deadline.date():
-                    errors["followup_date"] = "تاريخ المتابعة خارج المدة المسموح بها، ويجب حجز استشارة جديدة."
+                    errors["followup_date"] = "تاريخ المتابعة خارج المدة المسموح بها، ويجب طلب استشارة جديدة."
 
         if errors:
             raise ValidationError(errors)
@@ -245,5 +263,74 @@ class FollowUp(models.Model):
         """
         تشغيل clean قبل الحفظ لضمان تطبيق الشرط دائماً.
         """
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class FollowUpAttachment(models.Model):
+    """
+    مرفقات المتابعة:
+    صور / تقارير / مستندات طبية
+    الرفع اختياري ويتم ربطه بالمتابعة نفسها.
+    """
+    followup = models.ForeignKey(
+        FollowUp,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+        verbose_name="المتابعة"
+    )
+
+    title = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="عنوان الملف"
+    )
+
+    file = models.FileField(
+        upload_to="followups/attachments/",
+        verbose_name="الملف"
+    )
+
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="uploaded_followup_attachments",
+        verbose_name="تم الرفع بواسطة"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="تاريخ الرفع"
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "مرفق متابعة"
+        verbose_name_plural = "مرفقات المتابعة"
+
+    def __str__(self):
+        return self.title or self.filename
+
+    @property
+    def filename(self):
+        return self.file.name.split("/")[-1]
+
+    def clean(self):
+        errors = {}
+
+        if self.followup and self.uploaded_by:
+            # فقط المريض صاحب الموعد أو الطبيب المرتبط أو الأدمن يرفع مرفقات المتابعة
+            is_admin = getattr(self.uploaded_by, "user_type", "") == "admin" or self.uploaded_by.is_staff
+            is_patient = self.followup.patient_id == self.uploaded_by.id
+            is_doctor_user = getattr(self.followup.doctor, "user_id", None) == self.uploaded_by.id
+
+            if not (is_admin or is_patient or is_doctor_user):
+                errors["uploaded_by"] = "ليس لديك صلاحية لرفع مرفقات لهذه المتابعة."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
