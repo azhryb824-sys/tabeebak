@@ -29,7 +29,8 @@ def _validate_followup_creation_access(request, appointment):
         messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
         return redirect("appointment_detail", appointment_id=appointment.pk)
 
-    if appointment.status != "completed":
+    # ✅ التصحيح هنا: الاعتماد على session_status وليس status
+    if appointment.session_status != "completed":
         messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
         return redirect("appointment_detail", appointment_id=appointment.pk)
 
@@ -173,6 +174,7 @@ def followup_create(request):
         if form.is_valid():
             followup = form.save()
 
+            # ✅ إعادة فتح نفس الشات بعد إنشاء المتابعة
             if getattr(followup, "appointment", None):
                 followup.appointment.reset_chat_session()
 
@@ -270,7 +272,8 @@ def followup_edit(request, pk):
         messages.error(request, "الاستشارة الأصلية غير موجودة.")
         return redirect("consultations:followup_detail", pk=followup.pk)
 
-    if followup.appointment.status != "completed":
+    # ✅ التصحيح هنا أيضًا: session_status وليس status
+    if followup.appointment.session_status != "completed":
         messages.error(request, "لا يمكن تعديل المتابعة قبل اكتمال الاستشارة الأصلية.")
         return redirect("consultations:followup_detail", pk=followup.pk)
 
