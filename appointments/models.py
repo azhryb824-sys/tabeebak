@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
 from doctors.models import Doctor
 
 
@@ -34,49 +36,108 @@ class Appointment(models.Model):
         blank=True,
         null=True
     )
+
     doctor = models.ForeignKey(
         Doctor,
         on_delete=models.CASCADE,
         related_name="appointments"
     )
+
     full_name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)
     email = models.EmailField(blank=True, null=True)
+
     consultation_type = models.CharField(
         max_length=20,
         choices=CONSULTATION_TYPE_CHOICES,
         default="text"
     )
+
     appointment_date = models.DateField()
     appointment_time = models.TimeField()
+
     notes = models.TextField(blank=True, null=True)
     age = models.PositiveIntegerField(blank=True, null=True)
+
     gender = models.CharField(
         max_length=10,
         choices=GENDER_CHOICES,
         blank=True,
         null=True
     )
+
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default="pending"
     )
+
     session_status = models.CharField(
         max_length=20,
         choices=SESSION_STATUS_CHOICES,
         default="not_started"
     )
+
     doctor_notes = models.TextField(blank=True, null=True)
     diagnosis = models.TextField(blank=True, null=True)
     treatment_plan = models.TextField(blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # 🔥 الجديد: نظام التحكم في جلسة الشات
+    chat_started_at = models.DateTimeField(null=True, blank=True)
+    chat_expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.full_name} - {self.doctor.name} - {self.appointment_date}"
+
+    # ===============================
+    # 🔥 منطق الشات الجديد
+    # ===============================
+
+    def start_chat_session(self):
+        """
+        يبدأ جلسة شات جديدة (تستخدم عند أول رسالة من الطبيب)
+        """
+        self.chat_started_at = timezone.now()
+        self.chat_expires_at = timezone.now() + timedelta(minutes=15)
+        self.save()
+
+    def reset_chat_session(self):
+        """
+        إعادة ضبط الشات (يتم استدعاؤها عند إنشاء متابعة)
+        """
+        self.chat_started_at = None
+        self.chat_expires_at = None
+        self.save()
+
+    @property
+    def is_chat_started(self):
+        return self.chat_started_at is not None
+
+    @property
+    def is_chat_active(self):
+        if not self.chat_started_at:
+            return False
+        if self.chat_expires_at and timezone.now() <= self.chat_expires_at:
+            return True
+        return False
+
+    @property
+    def is_chat_expired(self):
+        if not self.chat_expires_at:
+            return False
+        return timezone.now() > self.chat_expires_at
+
+    @property
+    def remaining_chat_seconds(self):
+        if not self.chat_expires_at:
+            return None
+        remaining = int((self.chat_expires_at - timezone.now()).total_seconds())
+        return max(remaining, 0)
 
 
 class AppointmentAttachment(models.Model):
@@ -85,13 +146,17 @@ class AppointmentAttachment(models.Model):
         on_delete=models.CASCADE,
         related_name="attachments"
     )
+
     title = models.CharField(max_length=255, blank=True, null=True)
+
     file = models.FileField(upload_to="appointments/attachments/")
+
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="uploaded_appointment_attachments"
     )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -103,18 +168,23 @@ class AppointmentAttachment(models.Model):
     @property
     def filename(self):
         return self.file.name.split("/")[-1]
+
+
 class AppointmentMessage(models.Model):
     appointment = models.ForeignKey(
         Appointment,
         on_delete=models.CASCADE,
         related_name="messages"
     )
+
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="appointment_messages"
     )
+
     content = models.TextField()
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -122,24 +192,30 @@ class AppointmentMessage(models.Model):
 
     def __str__(self):
         return f"{self.sender.username} - {self.appointment.id}"
+
+
 class DoctorReview(models.Model):
     appointment = models.OneToOneField(
         "Appointment",
         on_delete=models.CASCADE,
         related_name="review"
     )
+
     doctor = models.ForeignKey(
         Doctor,
         on_delete=models.CASCADE,
         related_name="reviews"
     )
+
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="doctor_reviews"
     )
+
     rating = models.PositiveSmallIntegerField()
     comment = models.TextField(blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
