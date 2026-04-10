@@ -1,239 +1,597 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}المتابعات الطبية{% endblock %}
-{% block page_title %}المتابعات الطبية{% endblock %}
-{% block page_subtitle %}إدارة ومتابعة حالات المرضى بسهولة واحترافية{% endblock %}
+{% block title %}قائمة المتابعات | طبيبك{% endblock %}
 
-{% block dashboard_content %}
+{% block content %}
 
-<div class="panel-card">
+<style>
+    :root{
+        --primary:#0F4C81;
+        --primary-dark:#0A355A;
+        --secondary:#14B8A6;
+        --bg:#F8FAFC;
+        --text:#1E293B;
+        --muted:#64748B;
+        --border:#E2E8F0;
+        --shadow:0 18px 40px rgba(15,76,129,.08);
+        --success:#16A34A;
+        --warning:#F59E0B;
+        --danger:#DC2626;
+    }
 
-    <!-- 🔹 العنوان + زر -->
-    <div class="panel-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-            <h4 class="mb-1">قائمة المتابعات</h4>
-            <p class="text-muted mb-0">عرض جميع المتابعات الطبية المرتبطة بالاستشارات</p>
-        </div>
+    body{
+        font-family:'Cairo',sans-serif;
+        background:var(--bg);
+        color:var(--text);
+    }
 
-        <a href="{% url 'consultations:followup_create' %}" class="btn btn-main">
-            ➕ إضافة متابعة
-        </a>
-    </div>
+    .followups-section{
+        padding:120px 0 80px;
+        min-height:100vh;
+        background:
+            radial-gradient(circle at top right, rgba(20,184,166,.12), transparent 24%),
+            radial-gradient(circle at left center, rgba(15,76,129,.10), transparent 18%),
+            linear-gradient(180deg,#ffffff 0%, #f8fbfd 100%);
+    }
 
-    <div class="panel-card-body">
+    .followups-card{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:30px;
+        padding:30px;
+        box-shadow:var(--shadow);
+    }
 
-        <!-- 🔹 الإحصائيات -->
-        <div class="row g-3 mb-4">
+    .title{
+        font-size:2rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:10px;
+    }
 
-            <div class="col-md-3">
-                <div class="border rounded-4 p-3 bg-light">
-                    <div class="text-muted small">إجمالي المتابعات</div>
-                    <div class="fs-3 fw-bold">{{ stats.total }}</div>
+    .subtitle{
+        color:var(--muted);
+        line-height:1.9;
+        margin-bottom:24px;
+    }
+
+    .stats-grid{
+        display:grid;
+        grid-template-columns:repeat(4, 1fr);
+        gap:16px;
+        margin-bottom:24px;
+    }
+
+    .stat-box{
+        background:#f8fbfd;
+        border:1px solid var(--border);
+        border-radius:22px;
+        padding:20px;
+    }
+
+    .stat-box small{
+        display:block;
+        color:var(--muted);
+        font-weight:700;
+        margin-bottom:8px;
+    }
+
+    .stat-box strong{
+        font-size:1.6rem;
+        color:var(--primary-dark);
+        font-weight:900;
+    }
+
+    .filter-box{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:24px;
+        padding:22px;
+        margin-bottom:22px;
+    }
+
+    .filter-title{
+        font-size:1.05rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:16px;
+    }
+
+    .filter-grid{
+        display:grid;
+        grid-template-columns:2fr 1fr 1fr 1fr auto;
+        gap:14px;
+        align-items:end;
+    }
+
+    .form-label{
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:8px;
+        display:block;
+    }
+
+    .form-control,
+    .form-select,
+    input,
+    select{
+        width:100%;
+        border-radius:16px;
+        border:1px solid var(--border);
+        padding:12px 14px;
+        box-shadow:none !important;
+        background:#fff;
+    }
+
+    .table-box{
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:24px;
+        overflow:hidden;
+    }
+
+    .table-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:12px;
+        padding:20px 22px;
+        border-bottom:1px solid var(--border);
+        flex-wrap:wrap;
+    }
+
+    .table-title{
+        font-size:1.08rem;
+        font-weight:800;
+        color:var(--primary-dark);
+        margin:0;
+    }
+
+    .table-subtitle{
+        color:var(--muted);
+        margin:4px 0 0;
+    }
+
+    .table-responsive{
+        overflow-x:auto;
+    }
+
+    table{
+        width:100%;
+        border-collapse:collapse;
+        min-width:980px;
+    }
+
+    th, td{
+        padding:16px 18px;
+        text-align:right;
+        border-bottom:1px solid rgba(226,232,240,.85);
+        vertical-align:middle;
+    }
+
+    th{
+        background:#f8fbfd;
+        color:var(--primary-dark);
+        font-size:.95rem;
+        font-weight:800;
+        white-space:nowrap;
+    }
+
+    td{
+        color:var(--text);
+    }
+
+    tr:last-child td{
+        border-bottom:none;
+    }
+
+    .person-block{
+        display:flex;
+        flex-direction:column;
+        gap:4px;
+    }
+
+    .person-main{
+        font-weight:800;
+        color:var(--primary-dark);
+    }
+
+    .person-sub{
+        color:var(--muted);
+        font-size:.9rem;
+    }
+
+    .status-badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:8px 14px;
+        border-radius:999px;
+        font-size:.84rem;
+        font-weight:800;
+        white-space:nowrap;
+    }
+
+    .status-scheduled{
+        background:rgba(15,76,129,.10);
+        color:var(--primary);
+    }
+
+    .status-completed{
+        background:rgba(22,163,74,.12);
+        color:var(--success);
+    }
+
+    .status-cancelled{
+        background:rgba(220,38,38,.10);
+        color:var(--danger);
+    }
+
+    .status-expired{
+        background:rgba(245,158,11,.12);
+        color:#92400e;
+    }
+
+    .method-badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:8px 14px;
+        border-radius:999px;
+        font-size:.84rem;
+        font-weight:800;
+        background:rgba(20,184,166,.12);
+        color:#0f766e;
+        white-space:nowrap;
+    }
+
+    .actions{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+    }
+
+    .btn-main{
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        border:none;
+        border-radius:999px;
+        padding:12px 24px;
+        font-weight:800;
+        text-decoration:none;
+        cursor:pointer;
+    }
+
+    .btn-main:hover{
+        color:#fff;
+    }
+
+    .btn-outline-main{
+        border:1.5px solid var(--primary);
+        color:var(--primary);
+        background:#fff;
+        border-radius:999px;
+        padding:10px 18px;
+        font-weight:800;
+        text-decoration:none;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .btn-outline-main:hover{
+        background:var(--primary);
+        color:#fff;
+    }
+
+    .btn-soft{
+        border:1px solid var(--border);
+        color:var(--text);
+        background:#fff;
+        border-radius:999px;
+        padding:10px 18px;
+        font-weight:800;
+        text-decoration:none;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .btn-soft:hover{
+        color:var(--primary-dark);
+        border-color:var(--primary);
+    }
+
+    .empty-box{
+        padding:46px 20px;
+        text-align:center;
+    }
+
+    .empty-box h4{
+        color:var(--primary-dark);
+        font-weight:800;
+        margin-bottom:8px;
+    }
+
+    .empty-box p{
+        color:var(--muted);
+        margin-bottom:0;
+    }
+
+    .pagination-wrap{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:12px;
+        flex-wrap:wrap;
+        padding:20px 22px;
+        border-top:1px solid var(--border);
+    }
+
+    .pagination-info{
+        color:var(--muted);
+        font-weight:700;
+    }
+
+    .pagination-actions{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+    }
+
+    @media (max-width: 991.98px){
+        .stats-grid{
+            grid-template-columns:repeat(2, 1fr);
+        }
+
+        .filter-grid{
+            grid-template-columns:1fr 1fr;
+        }
+    }
+
+    @media (max-width: 767.98px){
+        .followups-section{
+            padding-top:105px;
+        }
+
+        .stats-grid{
+            grid-template-columns:1fr;
+        }
+
+        .filter-grid{
+            grid-template-columns:1fr;
+        }
+
+        .table-header,
+        .pagination-wrap{
+            flex-direction:column;
+            align-items:flex-start;
+        }
+
+        .actions{
+            flex-direction:column;
+        }
+
+        .actions a{
+            width:100%;
+            text-align:center;
+        }
+    }
+</style>
+
+<section class="followups-section">
+    <div class="container">
+        <div class="followups-card">
+            <h1 class="title">قائمة المتابعات الطبية</h1>
+            <p class="subtitle">
+                من هنا يمكنك متابعة كل الجلسات اللاحقة المرتبطة بالاستشارات الأصلية، مع معرفة حالتها ومدة صلاحيتها بسهولة.
+            </p>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <small>إجمالي المتابعات</small>
+                    <strong>{{ stats.total|default:"0" }}</strong>
+                </div>
+
+                <div class="stat-box">
+                    <small>المجدولة</small>
+                    <strong>{{ stats.scheduled|default:"0" }}</strong>
+                </div>
+
+                <div class="stat-box">
+                    <small>المكتملة</small>
+                    <strong>{{ stats.completed|default:"0" }}</strong>
+                </div>
+
+                <div class="stat-box">
+                    <small>الملغية</small>
+                    <strong>{{ stats.cancelled|default:"0" }}</strong>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="border rounded-4 p-3 bg-light">
-                    <div class="text-muted small">مجدولة</div>
-                    <div class="fs-3 fw-bold text-primary">{{ stats.scheduled }}</div>
+            <div class="filter-box">
+                <div class="filter-title">تصفية وبحث</div>
+
+                <form method="get">
+                    <div class="filter-grid">
+                        <div>
+                            <label class="form-label">بحث</label>
+                            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="اسم المريض، الطبيب، الجوال أو البريد">
+                        </div>
+
+                        <div>
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-select">
+                                <option value="">كل الحالات</option>
+                                <option value="scheduled" {% if status == "scheduled" %}selected{% endif %}>مجدولة</option>
+                                <option value="completed" {% if status == "completed" %}selected{% endif %}>مكتملة</option>
+                                <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>ملغية</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">النوع</label>
+                            <select name="method" class="form-select">
+                                <option value="">كل الأنواع</option>
+                                <option value="text" {% if method == "text" %}selected{% endif %}>كتابي</option>
+                                <option value="voice" {% if method == "voice" %}selected{% endif %}>صوتي</option>
+                                <option value="video" {% if method == "video" %}selected{% endif %}>مرئي</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">التاريخ</label>
+                            <input type="date" name="date" value="{{ date }}" class="form-control">
+                        </div>
+
+                        <div>
+                            <button type="submit" class="btn-main">تصفية</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-box">
+                <div class="table-header">
+                    <div>
+                        <h3 class="table-title">كل المتابعات</h3>
+                        <p class="table-subtitle">استعراض شامل للمتابعات المرتبطة بالمواعيد والاستشارات</p>
+                    </div>
+
+                    <a href="{% url 'consultations:followup_create' %}" class="btn-main">➕ إنشاء متابعة</a>
                 </div>
-            </div>
 
-            <div class="col-md-3">
-                <div class="border rounded-4 p-3 bg-light">
-                    <div class="text-muted small">مكتملة</div>
-                    <div class="fs-3 fw-bold text-success">{{ stats.completed }}</div>
-                </div>
-            </div>
+                {% if followups %}
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>المريض</th>
+                                    <th>الطبيب</th>
+                                    <th>الاستشارة الأصلية</th>
+                                    <th>نوع المتابعة</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ المتابعة</th>
+                                    <th>الصلاحية</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
 
-            <div class="col-md-3">
-                <div class="border rounded-4 p-3 bg-light">
-                    <div class="text-muted small">ملغية</div>
-                    <div class="fs-3 fw-bold text-danger">{{ stats.cancelled }}</div>
-                </div>
-            </div>
+                            <tbody>
+                                {% for item in followups %}
+                                    <tr>
+                                        <td>
+                                            <div class="person-block">
+                                                <span class="person-main">
+                                                    {{ item.patient.get_full_name|default:item.patient.username }}
+                                                </span>
+                                                <span class="person-sub">
+                                                    {{ item.patient.username }}
+                                                </span>
+                                            </div>
+                                        </td>
 
-        </div>
+                                        <td>
+                                            <div class="person-block">
+                                                <span class="person-main">{{ item.doctor.name }}</span>
+                                                {% if item.doctor.specialization %}
+                                                    <span class="person-sub">{{ item.doctor.specialization }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
 
-        <!-- 🔹 الفلترة -->
-        <form method="get" class="row g-3 mb-4">
+                                        <td>
+                                            <div class="person-block">
+                                                <span class="person-main">{{ item.appointment.full_name }}</span>
+                                                <span class="person-sub">
+                                                    {{ item.appointment.appointment_date }} - {{ item.appointment.appointment_time }}
+                                                </span>
+                                            </div>
+                                        </td>
 
-            <div class="col-md-4">
-                <label class="form-label">بحث</label>
-                <input type="text" name="q" value="{{ q }}" class="form-control"
-                       placeholder="اسم المريض / الطبيب / رقم الجوال">
-            </div>
+                                        <td>
+                                            <span class="method-badge">{{ item.get_method_display }}</span>
+                                        </td>
 
-            <div class="col-md-2">
-                <label class="form-label">الحالة</label>
-                <select name="status" class="form-select">
-                    <option value="">كل الحالات</option>
-                    <option value="scheduled" {% if status == "scheduled" %}selected{% endif %}>مجدولة</option>
-                    <option value="completed" {% if status == "completed" %}selected{% endif %}>مكتملة</option>
-                    <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>ملغية</option>
-                </select>
-            </div>
+                                        <td>
+                                            {% if item.status == "scheduled" %}
+                                                <span class="status-badge status-scheduled">مجدولة</span>
+                                            {% elif item.status == "completed" %}
+                                                <span class="status-badge status-completed">مكتملة</span>
+                                            {% else %}
+                                                <span class="status-badge status-cancelled">ملغية</span>
+                                            {% endif %}
+                                        </td>
 
-            <div class="col-md-2">
-                <label class="form-label">النوع</label>
-                <select name="method" class="form-select">
-                    <option value="">الكل</option>
-                    <option value="text" {% if method == "text" %}selected{% endif %}>كتابي</option>
-                    <option value="voice" {% if method == "voice" %}selected{% endif %}>صوتي</option>
-                    <option value="video" {% if method == "video" %}selected{% endif %}>مرئي</option>
-                </select>
-            </div>
+                                        <td>
+                                            <div class="person-block">
+                                                <span class="person-main">{{ item.followup_date }}</span>
+                                                <span class="person-sub">{{ item.followup_time }}</span>
+                                            </div>
+                                        </td>
 
-            <div class="col-md-2">
-                <label class="form-label">التاريخ</label>
-                <input type="date" name="date" value="{{ date }}" class="form-control">
-            </div>
+                                        <td>
+                                            {% if item.is_followup_allowed %}
+                                                <span class="status-badge status-completed">
+                                                    متاحة{% if item.days_remaining_for_followup %} ({{ item.days_remaining_for_followup }} يوم){% endif %}
+                                                </span>
+                                            {% else %}
+                                                <span class="status-badge status-expired">انتهت</span>
+                                            {% endif %}
+                                        </td>
 
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-main w-100">تصفية</button>
-            </div>
+                                        <td>
+                                            <div class="actions">
+                                                <a href="{% url 'consultations:followup_detail' item.id %}" class="btn-outline-main">عرض</a>
 
-        </form>
+                                                {% if item.is_followup_allowed %}
+                                                    <a href="{% url 'consultations:followup_edit' item.id %}" class="btn-soft">تعديل</a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
 
-        <!-- 🔹 الجدول -->
-        {% if followups %}
-        <div class="table-responsive">
+                    {% if page_obj and page_obj.has_other_pages %}
+                        <div class="pagination-wrap">
+                            <div class="pagination-info">
+                                الصفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                            </div>
 
-            <table class="table align-middle custom-table">
-
-                <thead>
-                    <tr>
-                        <th>المريض</th>
-                        <th>الطبيب</th>
-                        <th>نوع المتابعة</th>
-                        <th>الحالة</th>
-                        <th>التاريخ</th>
-                        <th>صلاحية المتابعة</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    {% for item in followups %}
-                    <tr>
-
-                        <!-- المريض -->
-                        <td>
-                            {{ item.patient.get_full_name|default:item.patient.username }}
-                        </td>
-
-                        <!-- الطبيب -->
-                        <td>
-                            {{ item.doctor.name }}
-                        </td>
-
-                        <!-- النوع -->
-                        <td>
-                            {% if item.method == "text" %}
-                                📝 كتابي
-                            {% elif item.method == "voice" %}
-                                🎤 صوتي
-                            {% else %}
-                                🎥 مرئي
-                            {% endif %}
-                        </td>
-
-                        <!-- الحالة -->
-                        <td>
-                            {% if item.status == "completed" %}
-                                <span class="badge bg-success">مكتملة</span>
-                            {% elif item.status == "scheduled" %}
-                                <span class="badge bg-primary">مجدولة</span>
-                            {% else %}
-                                <span class="badge bg-danger">ملغية</span>
-                            {% endif %}
-                        </td>
-
-                        <!-- التاريخ -->
-                        <td>
-                            {{ item.followup_date }} <br>
-                            <small class="text-muted">{{ item.followup_time }}</small>
-                        </td>
-
-                        <!-- صلاحية المتابعة -->
-                        <td>
-                            {% if item.is_followup_allowed %}
-                                <span class="badge bg-success">
-                                    متاحة ({{ item.days_remaining_for_followup }} يوم)
-                                </span>
-                            {% else %}
-                                <span class="badge bg-danger">
-                                    انتهت - يلزم استشارة جديدة
-                                </span>
-                            {% endif %}
-                        </td>
-
-                        <!-- الإجراءات -->
-                        <td>
-                            <div class="d-flex gap-2 flex-wrap">
-
-                                <a href="{% url 'consultations:followup_detail' item.id %}"
-                                   class="btn btn-sm btn-outline-primary">
-                                    عرض
-                                </a>
-
-                                {% if item.is_followup_allowed %}
-                                <a href="{% url 'consultations:followup_edit' item.id %}"
-                                   class="btn btn-sm btn-outline-success">
-                                    تعديل
-                                </a>
+                            <div class="pagination-actions">
+                                {% if page_obj.has_previous %}
+                                    <a
+                                        href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}&method={{ method }}&date={{ date }}"
+                                        class="btn-outline-main"
+                                    >
+                                        السابق
+                                    </a>
                                 {% endif %}
 
+                                {% if page_obj.has_next %}
+                                    <a
+                                        href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}&method={{ method }}&date={{ date }}"
+                                        class="btn-outline-main"
+                                    >
+                                        التالي
+                                    </a>
+                                {% endif %}
                             </div>
-                        </td>
-
-                    </tr>
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-        {% else %}
-
-        <!-- 🔹 حالة فارغة -->
-        <div class="text-center py-5">
-            <h5 class="mb-2">لا توجد متابعات حالياً</h5>
-            <p class="text-muted">ابدأ بإضافة متابعة جديدة</p>
-        </div>
-
-        {% endif %}
-
-        <!-- 🔹 الصفحات -->
-        {% if page_obj.has_other_pages %}
-        <div class="d-flex justify-content-between align-items-center mt-4">
-
-            <div class="text-muted">
-                صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
-            </div>
-
-            <div class="d-flex gap-2">
-
-                {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}"
-                   class="btn btn-sm btn-outline-secondary">السابق</a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-box">
+                        <h4>لا توجد متابعات حالياً</h4>
+                        <p>بمجرد إنشاء أول متابعة ستظهر هنا بشكل مرتب وواضح.</p>
+                    </div>
                 {% endif %}
-
-                {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}"
-                   class="btn btn-sm btn-outline-secondary">التالي</a>
-                {% endif %}
-
             </div>
-
         </div>
-        {% endif %}
-
     </div>
-</div>
+</section>
 
 {% endblock %}
