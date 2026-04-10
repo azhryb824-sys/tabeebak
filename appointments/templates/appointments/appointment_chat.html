@@ -4,87 +4,1402 @@
 {% block title %}المحادثة الطبية | منصتك الطبية{% endblock %}
 
 {% block content %}
+<style>
+    :root{
+        --primary:#0F4C81;
+        --primary-dark:#0A355A;
+        --secondary:#14B8A6;
+        --bg:#F4F8FB;
+        --surface:#FFFFFF;
+        --text:#1E293B;
+        --muted:#64748B;
+        --border:#E2E8F0;
+        --shadow:0 18px 40px rgba(15,76,129,.10);
+        --success:#16A34A;
+        --warning:#F59E0B;
+        --danger:#DC2626;
+        --doctor-bg:#E0F2FE;
+        --patient-bg:#F1F5F9;
+        --admin-bg:#FEF3C7;
+    }
+
+    body{
+        background:linear-gradient(180deg,#F7FBFF 0%,#EEF6FB 100%);
+        font-family:'Cairo',sans-serif;
+        color:var(--text);
+    }
+
+    .chat-page{
+        padding:120px 0 50px;
+        min-height:100vh;
+    }
+
+    .chat-shell{
+        max-width:1100px;
+        margin:auto;
+    }
+
+    .chat-layout{
+        display:grid;
+        grid-template-columns:320px 1fr;
+        gap:24px;
+        align-items:start;
+    }
+
+    .info-card,
+    .chat-card{
+        background:var(--surface);
+        border:1px solid rgba(226,232,240,.95);
+        border-radius:24px;
+        box-shadow:var(--shadow);
+    }
+
+    .info-card{
+        padding:22px;
+        position:sticky;
+        top:110px;
+    }
+
+    .doctor-mini{
+        display:flex;
+        align-items:center;
+        gap:14px;
+        margin-bottom:20px;
+        padding-bottom:18px;
+        border-bottom:1px solid var(--border);
+    }
+
+    .doctor-avatar{
+        width:64px;
+        height:64px;
+        border-radius:50%;
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:24px;
+        font-weight:800;
+        flex-shrink:0;
+    }
+
+    .doctor-meta h4{
+        margin:0 0 4px;
+        font-size:1.1rem;
+        font-weight:800;
+    }
+
+    .doctor-meta p{
+        margin:0;
+        color:var(--muted);
+        font-size:.92rem;
+    }
+
+    .status-box{
+        border-radius:18px;
+        padding:14px 16px;
+        margin-bottom:14px;
+        font-size:.95rem;
+        line-height:1.8;
+        border:1px solid transparent;
+    }
+
+    .status-box.success{
+        background:rgba(22,163,74,.08);
+        color:#166534;
+        border-color:rgba(22,163,74,.16);
+    }
+
+    .status-box.warning{
+        background:rgba(245,158,11,.10);
+        color:#92400E;
+        border-color:rgba(245,158,11,.18);
+    }
+
+    .status-box.danger{
+        background:rgba(220,38,38,.08);
+        color:#991B1B;
+        border-color:rgba(220,38,38,.18);
+    }
+
+    .status-box.info{
+        background:rgba(15,76,129,.08);
+        color:var(--primary-dark);
+        border-color:rgba(15,76,129,.15);
+    }
+
+    .countdown-card{
+        margin-top:16px;
+        padding:18px;
+        border-radius:22px;
+        background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+        color:#fff;
+        text-align:center;
+        box-shadow:0 16px 34px rgba(15,76,129,.22);
+    }
+
+    .countdown-label{
+        font-size:.92rem;
+        opacity:.9;
+        margin-bottom:8px;
+    }
+
+    .countdown-time{
+        font-size:2rem;
+        font-weight:900;
+        letter-spacing:1px;
+        margin:0;
+    }
+
+    .countdown-hint{
+        font-size:.82rem;
+        opacity:.84;
+        margin-top:8px;
+    }
+
+    .meta-list{
+        list-style:none;
+        padding:0;
+        margin:18px 0 0;
+    }
+
+    .meta-list li{
+        display:flex;
+        justify-content:space-between;
+        gap:14px;
+        padding:10px 0;
+        border-bottom:1px dashed var(--border);
+        font-size:.93rem;
+    }
+
+    .meta-list li:last-child{
+        border-bottom:none;
+        padding-bottom:0;
+    }
+
+    .meta-list span:first-child{
+        color:var(--muted);
+    }
+
+    .chat-card{
+        overflow:hidden;
+        display:flex;
+        flex-direction:column;
+        min-height:760px;
+    }
+
+    .chat-header{
+        padding:22px 24px;
+        border-bottom:1px solid var(--border);
+        background:linear-gradient(180deg,#fff 0%,#f8fbfe 100%);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        flex-wrap:wrap;
+    }
+
+    .chat-title h2{
+        margin:0 0 6px;
+        font-size:1.35rem;
+        font-weight:900;
+        color:var(--primary-dark);
+    }
+
+    .chat-title p{
+        margin:0;
+        color:var(--muted);
+        font-size:.94rem;
+    }
+
+    .live-badge{
+        background:rgba(20,184,166,.12);
+        color:#0F766E;
+        border:1px solid rgba(20,184,166,.18);
+        padding:9px 14px;
+        border-radius:999px;
+        font-weight:700;
+        font-size:.88rem;
+        white-space:nowrap;
+    }
+
+    .video-wrap{
+        padding:20px 24px;
+        border-bottom:1px solid var(--border);
+        background:linear-gradient(180deg,#ffffff 0%,#f7fbfd 100%);
+    }
+
+    .video-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:14px;
+        margin-bottom:16px;
+    }
+
+    .video-card{
+        position:relative;
+        background:#0f172a;
+        border-radius:18px;
+        overflow:hidden;
+        min-height:220px;
+        border:1px solid rgba(255,255,255,.08);
+        box-shadow:0 12px 24px rgba(15,23,42,.18);
+    }
+
+    .video-card video{
+        width:100%;
+        height:100%;
+        min-height:220px;
+        object-fit:cover;
+        display:block;
+        background:#000;
+    }
+
+    .video-label{
+        position:absolute;
+        right:12px;
+        bottom:12px;
+        background:rgba(15,23,42,.66);
+        color:#fff;
+        padding:6px 12px;
+        border-radius:999px;
+        font-size:.8rem;
+        font-weight:700;
+        backdrop-filter:blur(6px);
+    }
+
+    .video-actions{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+    }
+
+    .video-btn{
+        border:none;
+        border-radius:14px;
+        padding:12px 18px;
+        font-size:.94rem;
+        font-weight:800;
+        cursor:pointer;
+        transition:.2s ease;
+    }
+
+    .video-btn:hover{
+        transform:translateY(-1px);
+    }
+
+    .video-btn:disabled{
+        opacity:.6;
+        cursor:not-allowed;
+        transform:none;
+    }
+
+    .video-btn.start{
+        background:linear-gradient(135deg,var(--success),#22C55E);
+        color:#fff;
+        box-shadow:0 12px 24px rgba(22,163,74,.18);
+    }
+
+    .video-btn.end{
+        background:linear-gradient(135deg,var(--danger),#EF4444);
+        color:#fff;
+        box-shadow:0 12px 24px rgba(220,38,38,.18);
+    }
+
+    .video-btn.control{
+        background:#EFF6FF;
+        color:var(--primary-dark);
+        border:1px solid #DBEAFE;
+    }
+
+    .video-status{
+        margin-top:12px;
+        font-size:.88rem;
+        color:var(--muted);
+    }
+
+    .messages-wrap{
+        flex:1;
+        padding:24px;
+        background:
+            radial-gradient(circle at top right, rgba(15,76,129,.05), transparent 24%),
+            radial-gradient(circle at bottom left, rgba(20,184,166,.06), transparent 22%),
+            #F8FBFD;
+        overflow-y:auto;
+        max-height:calc(100vh - 280px);
+        scroll-behavior:smooth;
+    }
+
+    .empty-chat{
+        height:100%;
+        min-height:320px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        padding:30px;
+    }
+
+    .empty-chat-box{
+        max-width:430px;
+        background:#fff;
+        border:1px dashed var(--border);
+        border-radius:24px;
+        padding:30px 24px;
+        color:var(--muted);
+    }
+
+    .date-divider{
+        text-align:center;
+        margin:18px 0 24px;
+        position:relative;
+    }
+
+    .date-divider span{
+        display:inline-block;
+        background:#fff;
+        border:1px solid var(--border);
+        padding:7px 16px;
+        border-radius:999px;
+        font-size:.82rem;
+        color:var(--muted);
+        position:relative;
+        z-index:2;
+    }
+
+    .message-row{
+        display:flex;
+        margin-bottom:16px;
+    }
+
+    .message-row.doctor{
+        justify-content:flex-start;
+    }
+
+    .message-row.patient,
+    .message-row.admin{
+        justify-content:flex-end;
+    }
+
+    .message-bubble{
+        max-width:min(76%, 620px);
+        border-radius:22px;
+        padding:14px 16px 12px;
+        position:relative;
+        box-shadow:0 10px 24px rgba(15,23,42,.06);
+        border:1px solid rgba(255,255,255,.55);
+        backdrop-filter:blur(8px);
+    }
+
+    .message-row.doctor .message-bubble{
+        background:var(--doctor-bg);
+        border-top-right-radius:22px;
+        border-top-left-radius:8px;
+    }
+
+    .message-row.patient .message-bubble{
+        background:var(--patient-bg);
+        border-top-left-radius:22px;
+        border-top-right-radius:8px;
+    }
+
+    .message-row.admin .message-bubble{
+        background:var(--admin-bg);
+        border-top-left-radius:22px;
+        border-top-right-radius:8px;
+    }
+
+    .message-sender{
+        font-size:.8rem;
+        font-weight:800;
+        margin-bottom:6px;
+    }
+
+    .message-row.doctor .message-sender{
+        color:var(--primary-dark);
+    }
+
+    .message-row.patient .message-sender{
+        color:#334155;
+    }
+
+    .message-row.admin .message-sender{
+        color:#92400E;
+    }
+
+    .message-text{
+        font-size:.97rem;
+        line-height:1.9;
+        color:var(--text);
+        word-break:break-word;
+        white-space:pre-wrap;
+    }
+
+    .message-time{
+        margin-top:8px;
+        font-size:.74rem;
+        color:var(--muted);
+        text-align:left;
+    }
+
+    .chat-alert{
+        margin:0 24px;
+        margin-top:18px;
+        padding:14px 16px;
+        border-radius:16px;
+        font-size:.92rem;
+        display:none;
+    }
+
+    .chat-alert.show{
+        display:block;
+    }
+
+    .chat-alert.info{
+        background:rgba(15,76,129,.08);
+        color:var(--primary-dark);
+        border:1px solid rgba(15,76,129,.14);
+    }
+
+    .chat-alert.warning{
+        background:rgba(245,158,11,.12);
+        color:#92400E;
+        border:1px solid rgba(245,158,11,.18);
+    }
+
+    .chat-alert.danger{
+        background:rgba(220,38,38,.08);
+        color:#991B1B;
+        border:1px solid rgba(220,38,38,.18);
+    }
+
+    .chat-form-wrap{
+        border-top:1px solid var(--border);
+        background:#fff;
+        padding:18px 20px 20px;
+    }
+
+    .chat-form{
+        display:flex;
+        align-items:flex-end;
+        gap:14px;
+    }
+
+    .chat-input-wrap{
+        flex:1;
+        background:#F8FAFC;
+        border:1px solid var(--border);
+        border-radius:22px;
+        padding:12px 14px;
+        transition:.2s ease;
+    }
+
+    .chat-input-wrap:focus-within{
+        border-color:rgba(15,76,129,.45);
+        box-shadow:0 0 0 4px rgba(15,76,129,.07);
+        background:#fff;
+    }
+
+    .chat-input{
+        width:100%;
+        border:none;
+        outline:none;
+        background:transparent;
+        resize:none;
+        min-height:54px;
+        max-height:160px;
+        font-size:.96rem;
+        line-height:1.8;
+        color:var(--text);
+    }
+
+    .send-btn{
+        min-width:150px;
+        height:54px;
+        border:none;
+        border-radius:18px;
+        background:linear-gradient(135deg,var(--primary),var(--secondary));
+        color:#fff;
+        font-weight:800;
+        font-size:.96rem;
+        box-shadow:0 14px 28px rgba(15,76,129,.18);
+        transition:.2s ease;
+    }
+
+    .send-btn:hover{
+        transform:translateY(-1px);
+        box-shadow:0 18px 34px rgba(15,76,129,.22);
+    }
+
+    .send-btn:disabled{
+        opacity:.55;
+        cursor:not-allowed;
+        transform:none;
+        box-shadow:none;
+    }
+
+    .form-note{
+        margin-top:10px;
+        color:var(--muted);
+        font-size:.85rem;
+    }
+
+    .typing-note{
+        margin-top:8px;
+        color:var(--muted);
+        font-size:.82rem;
+    }
+
+    @media (max-width: 991px){
+        .chat-layout{
+            grid-template-columns:1fr;
+        }
+
+        .info-card{
+            position:static;
+        }
+
+        .chat-card{
+            min-height:680px;
+        }
+
+        .messages-wrap{
+            max-height:60vh;
+        }
+    }
+
+    @media (max-width: 576px){
+        .chat-page{
+            padding:100px 0 30px;
+        }
+
+        .chat-header,
+        .messages-wrap,
+        .chat-form-wrap,
+        .info-card,
+        .video-wrap{
+            padding-right:16px;
+            padding-left:16px;
+        }
+
+        .chat-form{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .send-btn{
+            width:100%;
+            min-width:auto;
+        }
+
+        .message-bubble{
+            max-width:90%;
+        }
+
+        .countdown-time{
+            font-size:1.7rem;
+        }
+
+        .video-grid{
+            grid-template-columns:1fr;
+        }
+
+        .video-card video{
+            min-height:180px;
+        }
+    }
+</style>
 
 <section class="chat-page">
     <div class="container">
+        <div class="chat-shell">
+            <div class="chat-layout">
 
-        <h2>المحادثة الطبية</h2>
+                <aside class="info-card">
+                    <div class="doctor-mini">
+                        <div class="doctor-avatar">
+                            {{ appointment.doctor.name|default:appointment.doctor.user.get_full_name|default:"ط"|slice:":1" }}
+                        </div>
+                        <div class="doctor-meta">
+                            <h4>
+                                {{ appointment.doctor.name|default:appointment.doctor.user.get_full_name|default:"الطبيب" }}
+                            </h4>
+                            <p>جلسة محادثة طبية مباشرة</p>
+                        </div>
+                    </div>
 
-        <div id="messagesContainer" style="height:300px; overflow:auto; border:1px solid #ddd; padding:10px;">
-            {% for msg in chat_messages %}
-                <p>
-                    <strong>{{ msg.sender_name }}:</strong>
-                    {{ msg.content }}
-                </p>
-            {% empty %}
-                <p>لا توجد رسائل بعد</p>
-            {% endfor %}
+                    <div id="sessionStatusBox" class="status-box info">
+                        يتم التحقق من حالة الجلسة...
+                    </div>
+
+                    <div class="countdown-card" id="countdownCard">
+                        <div class="countdown-label">الوقت المتبقي للجلسة</div>
+                        <p class="countdown-time" id="countdownText">--:--</p>
+                        <div class="countdown-hint">مدة الجلسة تبدأ من أول رسالة يرسلها الطبيب</div>
+                    </div>
+
+                    <ul class="meta-list">
+                        <li>
+                            <span>رقم الموعد</span>
+                            <strong>#{{ appointment.id }}</strong>
+                        </li>
+                        <li>
+                            <span>اسم المريض</span>
+                            <strong>{{ appointment.patient.get_full_name|default:appointment.patient.username }}</strong>
+                        </li>
+                        <li>
+                            <span>الحالة</span>
+                            <strong>{{ appointment.status|default:"قيد المتابعة" }}</strong>
+                        </li>
+                        <li>
+                            <span>تاريخ الإنشاء</span>
+                            <strong>{{ appointment.created_at|date:"Y-m-d H:i" }}</strong>
+                        </li>
+                    </ul>
+                </aside>
+
+                <section class="chat-card">
+                    <div class="chat-header">
+                        <div class="chat-title">
+                            <h2>المحادثة الطبية</h2>
+                            <p>تواصل آمن ومباشر بين الطبيب والمريض داخل الجلسة</p>
+                        </div>
+
+                        <div style="display:flex;gap:10px;align-items:center">
+                            <div class="live-badge" id="liveBadge">جاري فحص حالة الجلسة</div>
+
+                            {% if request.user == appointment.patient %}
+                                {% if not appointment.review %}
+                                    <a href="{% url 'submit_doctor_review' appointment.id %}"
+                                       style="
+                                            background:#16A34A;
+                                            color:white;
+                                            padding:8px 14px;
+                                            border-radius:10px;
+                                            font-size:13px;
+                                            font-weight:700;
+                                            text-decoration:none;
+                                       ">
+                                        ⭐ تقييم الطبيب
+                                    </a>
+                                {% else %}
+                                    <span style="
+                                        background:#e2e8f0;
+                                        padding:8px 12px;
+                                        border-radius:10px;
+                                        font-size:12px;
+                                    ">
+                                        ✅ تم التقييم
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div id="chatAlert" class="chat-alert info"></div>
+
+                    <div class="video-wrap">
+                        <div class="video-grid">
+                            <div class="video-card">
+                                <video id="localVideo" autoplay playsinline muted></video>
+                                <div class="video-label">الفيديو الخاص بك</div>
+                            </div>
+
+                            <div class="video-card">
+                                <video id="remoteVideo" autoplay playsinline></video>
+                                <div class="video-label">الطرف الآخر</div>
+                            </div>
+                        </div>
+
+                        <div class="video-actions">
+                            <button type="button" id="startCallBtn" class="video-btn start">🎥 بدء المكالمة</button>
+                            <button type="button" id="endCallBtn" class="video-btn end">❌ إنهاء المكالمة</button>
+                            <button type="button" id="toggleMicBtn" class="video-btn control">🎤 كتم المايك</button>
+                            <button type="button" id="toggleCamBtn" class="video-btn control">📷 إيقاف الكاميرا</button>
+                            <button type="button" id="startRecordBtn" class="video-btn control">🔴 تسجيل</button>
+                            <button type="button" id="stopRecordBtn" class="video-btn control">⏹️ إيقاف التسجيل</button>
+                        </div>
+
+                        <div class="video-status" id="videoStatusText">
+                            يمكنك بدء الاستشارة المرئية من هنا.
+                        </div>
+                    </div>
+
+                    <div class="messages-wrap" id="messagesContainer">
+
+                        {% if chat_messages %}
+                            <div class="date-divider">
+                                <span>سجل المحادثة</span>
+                            </div>
+
+                            {% for msg in chat_messages %}
+                                <div class="message-row {{ msg.sender_type }}">
+                                    <div class="message-bubble">
+                                        <div class="message-sender">
+                                            {{ msg.sender_name }}
+                                            {% if msg.sender_type == "doctor" %}
+                                                (الطبيب)
+                                            {% elif msg.sender_type == "patient" %}
+                                                (المريض)
+                                            {% elif msg.sender_type == "admin" %}
+                                                (الإدارة)
+                                            {% endif %}
+                                        </div>
+                                        <div class="message-text">{{ msg.content }}</div>
+                                        <div class="message-time">{{ msg.created_at|date:"Y-m-d H:i" }}</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-chat" id="emptyChat">
+                                <div class="empty-chat-box">
+                                    <h5 class="mb-3 fw-bold">لا توجد رسائل بعد</h5>
+                                    <p class="mb-0">
+                                        تبدأ الجلسة عندما يرسل الطبيب أول رسالة. بعد ذلك يبدأ مؤقت الجلسة لمدة 15 دقيقة.
+                                    </p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="chat-form-wrap">
+                        <form id="chatForm" class="chat-form">
+                            <div class="chat-input-wrap">
+                                <textarea
+                                    id="chatMessageInput"
+                                    class="chat-input"
+                                    placeholder="اكتب رسالتك هنا..."
+                                    rows="2"
+                                    {% if not current_user_can_send %}disabled{% endif %}
+                                ></textarea>
+                            </div>
+                            <button
+                                type="submit"
+                                id="sendButton"
+                                class="send-btn"
+                                {% if not current_user_can_send %}disabled{% endif %}
+                            >
+                                إرسال الرسالة
+                            </button>
+                        </form>
+
+                        <div class="form-note" id="formNote">
+                            {% if send_error_message %}
+                                {{ send_error_message }}
+                            {% else %}
+                                يمكنك إرسال الرسائل أثناء فترة الجلسة النشطة فقط.
+                            {% endif %}
+                        </div>
+
+                        <div class="typing-note">
+                            عند انتهاء المؤقت سيتم إغلاق المحادثة تلقائياً.
+                        </div>
+                    </div>
+                </section>
+
+            </div>
         </div>
-
-        <form id="chatForm">
-            <textarea id="chatMessageInput" rows="3" style="width:100%;"></textarea>
-            <button type="submit">إرسال</button>
-        </form>
-
     </div>
 </section>
 
 <script>
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
 
     const appointmentId = "{{ appointment.id }}";
-
     const isDoctorStarted = {{ chat_timing.doctor_started_chat|yesno:"true,false" }};
-    const isChatClosed = {{ chat_timing.chat_closed|yesno:"true,false" }};
-
-    // ✅ التعديل المهم
+    const isChatClosedInitially = {{ chat_timing.chat_closed|yesno:"true,false" }};
     const isDoctor = {% if appointment.doctor.user_id == request.user.id %}true{% else %}false{% endif %};
-
     let currentUserCanSend = {{ current_user_can_send|yesno:"true,false" }};
     let remainingSeconds = {% if chat_timing.remaining_seconds != None %}{{ chat_timing.remaining_seconds }}{% else %}null{% endif %};
 
     const messagesContainer = document.getElementById("messagesContainer");
     const messageInput = document.getElementById("chatMessageInput");
+    const sendButton = document.getElementById("sendButton");
     const chatForm = document.getElementById("chatForm");
+    const chatAlert = document.getElementById("chatAlert");
+    const formNote = document.getElementById("formNote");
+    const sessionStatusBox = document.getElementById("sessionStatusBox");
+    const countdownText = document.getElementById("countdownText");
+    const liveBadge = document.getElementById("liveBadge");
+    const videoStatusText = document.getElementById("videoStatusText");
+
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+    const startCallBtn = document.getElementById("startCallBtn");
+    const endCallBtn = document.getElementById("endCallBtn");
+    const toggleMicBtn = document.getElementById("toggleMicBtn");
+    const toggleCamBtn = document.getElementById("toggleCamBtn");
 
     let chatSocket = null;
+    let countdownInterval = null;
+    let doctorStartedChat = isDoctorStarted;
+    let chatClosed = isChatClosedInitially;
 
-    function appendMessage(sender, message) {
-        const p = document.createElement("p");
-        p.innerHTML = "<strong>" + sender + ":</strong> " + message;
-        messagesContainer.appendChild(p);
+    let localStream = null;
+    let peerConnection = null;
+    let micEnabled = true;
+    let camEnabled = true;
+    let reconnectingCall = false;
+
+    const rtcConfig = {
+        iceServers: [
+            { urls: "stun:stun.l.google.com:19302" }
+        ]
+    };
+
+    function scrollToBottom() {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function autoResizeTextarea(el) {
+        el.style.height = "auto";
+        el.style.height = Math.min(el.scrollHeight, 160) + "px";
+    }
+
+    function showAlert(message, type = "info") {
+        chatAlert.className = `chat-alert show ${type}`;
+        chatAlert.textContent = message;
+    }
+
+    function clearAlert() {
+        chatAlert.className = "chat-alert info";
+        chatAlert.textContent = "";
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatTime(seconds) {
+        if (seconds === null || seconds === undefined) return "--:--";
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    }
+
+    function updateCountdownUI() {
+        countdownText.textContent = formatTime(remainingSeconds);
+
+        if (!doctorStartedChat) {
+            countdownText.textContent = "--:--";
+        }
+    }
+
+    function applyChatState() {
+        updateCountdownUI();
+
+        if (chatClosed) {
+            sessionStatusBox.className = "status-box danger";
+            sessionStatusBox.textContent = "انتهت مدة الجلسة. تم إغلاق المحادثة بعد مرور 15 دقيقة من أول رسالة للطبيب.";
+            liveBadge.textContent = "الجلسة مغلقة";
+            formNote.textContent = "لا يمكن إرسال رسائل جديدة بعد انتهاء مدة الجلسة.";
+            sendButton.disabled = true;
+            messageInput.disabled = true;
+            startCallBtn.disabled = true;
+            toggleMicBtn.disabled = true;
+            toggleCamBtn.disabled = true;
+            return;
+        }
+
+        if (!doctorStartedChat) {
+            sessionStatusBox.className = "status-box warning";
+            sessionStatusBox.textContent = "لم يبدأ الطبيب المحادثة بعد. يبدأ مؤقت 15 دقيقة عند إرسال أول رسالة من الطبيب.";
+            liveBadge.textContent = "بانتظار الطبيب";
+            countdownText.textContent = "--:--";
+
+            if (!isDoctor) {
+                sendButton.disabled = true;
+                messageInput.disabled = true;
+                formNote.textContent = "بانتظار أن يبدأ الطبيب المحادثة أولاً.";
+            } else {
+                sendButton.disabled = false;
+                messageInput.disabled = false;
+                formNote.textContent = "أرسل أول رسالة لبدء الجلسة لمدة 15 دقيقة.";
+            }
+
+            startCallBtn.disabled = true;
+            toggleMicBtn.disabled = true;
+            toggleCamBtn.disabled = true;
+            return;
+        }
+
+        sessionStatusBox.className = "status-box success";
+        sessionStatusBox.textContent = "الجلسة نشطة حالياً. يمكنك تبادل الرسائل حتى انتهاء المؤقت.";
+        liveBadge.textContent = "الجلسة نشطة";
+        formNote.textContent = "يمكنك إرسال الرسائل أثناء فترة الجلسة النشطة فقط.";
+
+        if (currentUserCanSend) {
+            sendButton.disabled = false;
+            messageInput.disabled = false;
+        }
+
+        startCallBtn.disabled = false;
+        toggleMicBtn.disabled = false;
+        toggleCamBtn.disabled = false;
+    }
+
+    function startCountdown() {
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+        }
+
+        if (!doctorStartedChat || remainingSeconds === null || chatClosed) {
+            updateCountdownUI();
+            return;
+        }
+
+        updateCountdownUI();
+
+        countdownInterval = setInterval(() => {
+            if (remainingSeconds === null) return;
+
+            if (remainingSeconds > 0) {
+                remainingSeconds -= 1;
+                updateCountdownUI();
+            } else {
+                clearInterval(countdownInterval);
+                chatClosed = true;
+                currentUserCanSend = false;
+                applyChatState();
+                showAlert("انتهت مدة الجلسة وتم إغلاق المحادثة تلقائياً.", "danger");
+                endCall();
+            }
+        }, 1000);
+    }
+
+    function appendMessage(sender, senderType, message, createdAt) {
+        const emptyChat = document.getElementById("emptyChat");
+        if (emptyChat) {
+            emptyChat.remove();
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = `message-row ${senderType}`;
+
+        let senderLabel = escapeHtml(sender || "مستخدم");
+        if (senderType === "doctor") {
+            senderLabel += " (الطبيب)";
+        } else if (senderType === "patient") {
+            senderLabel += " (المريض)";
+        } else if (senderType === "admin") {
+            senderLabel += " (الإدارة)";
+        }
+
+        wrapper.innerHTML = `
+            <div class="message-bubble">
+                <div class="message-sender">${senderLabel}</div>
+                <div class="message-text">${escapeHtml(message || "")}</div>
+                <div class="message-time">${escapeHtml(createdAt || "")}</div>
+            </div>
+        `;
+
+        messagesContainer.appendChild(wrapper);
+        scrollToBottom();
+    }
+
+    async function ensureLocalStream() {
+        if (localStream) {
+            return localStream;
+        }
+
+        localStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+            },
+            audio: true
+        });
+
+        localStream.getAudioTracks().forEach(track => {
+            track.enabled = micEnabled;
+        });
+
+        localStream.getVideoTracks().forEach(track => {
+            track.enabled = camEnabled;
+        });
+
+        localVideo.srcObject = localStream;
+        return localStream;
+    }
+
+    function createPeerConnection() {
+        if (peerConnection) {
+            return peerConnection;
+        }
+
+        peerConnection = new RTCPeerConnection(rtcConfig);
+
+        peerConnection.ontrack = (event) => {
+            remoteVideo.srcObject = event.streams[0];
+            videoStatusText.textContent = "🟢 المكالمة متصلة";
+        };
+
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    event: "ice",
+                    candidate: event.candidate
+                }));
+            }
+        };
+
+        peerConnection.onconnectionstatechange = () => {
+            const state = peerConnection.connectionState;
+
+            if (state === "connected") {
+                reconnectingCall = false;
+                videoStatusText.textContent = "🟢 المكالمة متصلة";
+            } else if (state === "connecting") {
+                videoStatusText.textContent = "جاري الاتصال بالطرف الآخر...";
+            } else if (state === "disconnected") {
+                videoStatusText.textContent = "انقطع الاتصال المرئي.";
+            } else if (state === "failed") {
+                videoStatusText.textContent = "انقطع الاتصال... جاري إعادة المحاولة";
+                if (!reconnectingCall && !chatClosed) {
+                    reconnectingCall = true;
+                    setTimeout(() => {
+                        if (!chatClosed) {
+                            startCall();
+                        }
+                    }, 2000);
+                }
+            } else if (state === "closed") {
+                videoStatusText.textContent = "🔴 تم إنهاء المكالمة";
+            }
+        };
+
+        return peerConnection;
+    }
+
+    async function attachLocalTracks() {
+        const stream = await ensureLocalStream();
+        const pc = createPeerConnection();
+
+        const existingKinds = pc.getSenders()
+            .map(sender => sender.track && sender.track.kind)
+            .filter(Boolean);
+
+        stream.getTracks().forEach(track => {
+            if (!existingKinds.includes(track.kind)) {
+                pc.addTrack(track, stream);
+            }
+        });
+    }
+
+    async function startCall() {
+        try {
+            if (chatClosed) {
+                showAlert("لا يمكن بدء المكالمة بعد انتهاء الجلسة.", "warning");
+                return;
+            }
+
+            if (!doctorStartedChat) {
+                showAlert("يمكن بدء المكالمة بعد أن يبدأ الطبيب المحادثة أولاً.", "warning");
+                return;
+            }
+
+            if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
+                showAlert("الاتصال غير جاهز حالياً.", "danger");
+                return;
+            }
+
+            videoStatusText.textContent = "🎥 جاري بدء المكالمة...";
+            await attachLocalTracks();
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            chatSocket.send(JSON.stringify({
+                event: "offer",
+                offer: offer
+            }));
+
+            videoStatusText.textContent = "تم إرسال طلب بدء المكالمة للطرف الآخر.";
+        } catch (error) {
+            console.error(error);
+            videoStatusText.textContent = "تعذر بدء المكالمة المرئية.";
+            showAlert("تعذر بدء المكالمة. تأكد من السماح بالكاميرا والمايكروفون.", "danger");
+        }
+    }
+
+    async function answerCall(offer) {
+        try {
+            videoStatusText.textContent = "يتم الرد على المكالمة المرئية...";
+            await attachLocalTracks();
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            chatSocket.send(JSON.stringify({
+                event: "answer",
+                answer: answer
+            }));
+
+            videoStatusText.textContent = "تم إرسال الرد على المكالمة.";
+        } catch (error) {
+            console.error(error);
+            videoStatusText.textContent = "تعذر الرد على المكالمة.";
+            showAlert("تعذر الرد على المكالمة المرئية.", "danger");
+        }
+    }
+
+    async function handleAnswer(answer) {
+        try {
+            if (!peerConnection) {
+                return;
+            }
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            videoStatusText.textContent = "تم استكمال الربط مع الطرف الآخر.";
+        } catch (error) {
+            console.error(error);
+            showAlert("حدث خطأ أثناء إكمال الاتصال المرئي.", "danger");
+        }
+    }
+
+    async function handleIceCandidate(candidate) {
+        try {
+            if (peerConnection && candidate) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function endCall() {
+        stopRecording();
+        reconnectingCall = false;
+
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+
+        localVideo.srcObject = null;
+        remoteVideo.srcObject = null;
+
+        videoStatusText.textContent = "🔴 تم إنهاء المكالمة";
+    }
+
+    function startRecording() {
+        if (!localStream) {
+            showAlert("ابدأ المكالمة أولاً", "warning");
+            return;
+        }
+
+        try {
+            recordedChunks = [];
+
+            mediaRecorder = new MediaRecorder(localStream, {
+                mimeType: "video/webm;codecs=vp8,opus"
+            });
+
+            mediaRecorder.ondataavailable = function (event) {
+                if (event.data && event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstart = function () {
+                isRecording = true;
+                videoStatusText.textContent = "🔴 جاري تسجيل الجلسة...";
+            };
+
+            mediaRecorder.onstop = function () {
+                isRecording = false;
+
+                if (recordedChunks.length === 0) {
+                    videoStatusText.textContent = "لم يتم تسجيل أي بيانات";
+                    return;
+                }
+
+                const blob = new Blob(recordedChunks, { type: "video/webm" });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "medical_session.webm";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+
+                videoStatusText.textContent = "✅ تم حفظ التسجيل";
+            };
+
+            mediaRecorder.start(1000);
+
+        } catch (e) {
+            console.error(e);
+            showAlert("المتصفح لا يدعم التسجيل", "danger");
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+        }
     }
 
     function setupSocket() {
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const socketUrl = `${protocol}://${window.location.host}/ws/appointments/${appointmentId}/chat/`;
-
         chatSocket = new WebSocket(socketUrl);
 
-        chatSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
+        chatSocket.onopen = function () {
+            clearAlert();
+        };
 
-            if (data.event === "chat_message") {
-                appendMessage(data.sender, data.message);
+        chatSocket.onmessage = async function (e) {
+            const data = JSON.parse(e.data);
+            console.log("WS:", data);
+
+            if (data.event === "error" || data.type === "error") {
+                showAlert(data.message || "تعذر إرسال الرسالة.", "danger");
+                return;
             }
+
+            if (data.event === "chat_status" || data.type === "chat_status") {
+                doctorStartedChat = !!data.doctor_started_chat;
+                chatClosed = !!data.chat_closed;
+                remainingSeconds = data.remaining_seconds;
+                applyChatState();
+                startCountdown();
+                return;
+            }
+
+            if (data.event === "chat_message" || data.type === "chat_message") {
+                appendMessage(
+                    data.sender || "مستخدم",
+                    data.sender_type || "patient",
+                    data.message || "",
+                    data.created_at || ""
+                );
+
+                doctorStartedChat = !!data.doctor_started_chat;
+                chatClosed = !!data.chat_closed;
+                remainingSeconds = data.remaining_seconds;
+
+                if (!chatClosed && doctorStartedChat) {
+                    currentUserCanSend = true;
+                }
+
+                applyChatState();
+                startCountdown();
+                clearAlert();
+                return;
+            }
+
+            if (data.event === "offer") {
+                await answerCall(data.offer);
+                return;
+            }
+
+            if (data.event === "answer") {
+                await handleAnswer(data.answer);
+                return;
+            }
+
+            if (data.event === "ice") {
+                await handleIceCandidate(data.candidate);
+                return;
+            }
+        };
+
+        chatSocket.onclose = function () {
+            showAlert("تم قطع الاتصال بالمحادثة. أعد تحميل الصفحة إذا استمرت المشكلة.", "warning");
+        };
+
+        chatSocket.onerror = function () {
+            showAlert("حدث خطأ في الاتصال المباشر بالمحادثة.", "danger");
         };
     }
 
-    chatForm.addEventListener("submit", function(e) {
+    chatForm.addEventListener("submit", function (e) {
         e.preventDefault();
 
         const message = messageInput.value.trim();
-        if (!message) return;
+
+        if (!message) {
+            showAlert("من فضلك اكتب رسالة أولاً.", "warning");
+            return;
+        }
+
+        if (messageInput.disabled || sendButton.disabled) {
+            showAlert("الإرسال غير متاح حالياً.", "warning");
+            return;
+        }
+
+        if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
+            showAlert("الاتصال غير جاهز حالياً. حاول مرة أخرى.", "danger");
+            return;
+        }
 
         chatSocket.send(JSON.stringify({
             message: message
         }));
 
         messageInput.value = "";
+        autoResizeTextarea(messageInput);
     });
 
+    messageInput.addEventListener("input", function () {
+        autoResizeTextarea(this);
+    });
+
+    messageInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (!sendButton.disabled) {
+                chatForm.dispatchEvent(new Event("submit"));
+            }
+        }
+    });
+
+    startCallBtn.addEventListener("click", startCall);
+    endCallBtn.addEventListener("click", endCall);
+    document.getElementById("startRecordBtn").onclick = startRecording;
+    document.getElementById("stopRecordBtn").onclick = stopRecording;
+
+    toggleMicBtn.addEventListener("click", function () {
+        if (!localStream) return;
+
+        micEnabled = !micEnabled;
+
+        localStream.getAudioTracks().forEach(track => {
+            track.enabled = micEnabled;
+        });
+
+        toggleMicBtn.textContent = micEnabled ? "🎤 كتم المايك" : "🔇 تشغيل المايك";
+    });
+
+    toggleCamBtn.addEventListener("click", function () {
+        if (!localStream) return;
+
+        camEnabled = !camEnabled;
+
+        localStream.getVideoTracks().forEach(track => {
+            track.enabled = camEnabled;
+        });
+
+        toggleCamBtn.textContent = camEnabled ? "📷 إيقاف الكاميرا" : "📷 تشغيل الكاميرا";
+    });
+
+    applyChatState();
+    startCountdown();
     setupSocket();
-
+    scrollToBottom();
 </script>
-
 {% endblock %}
