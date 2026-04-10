@@ -459,7 +459,11 @@
                         <p class="table-subtitle">استعراض شامل للمتابعات المرتبطة بالمواعيد والاستشارات</p>
                     </div>
 
-                    <a href="{% url 'consultations:followup_create' %}" class="btn-main">➕ إنشاء متابعة</a>
+                    {% if request.user and not request.user.is_staff %}
+                        <div class="table-subtitle">
+                            المتابعة الطبية متاحة للمريض بعد اكتمال الاستشارة وخلال 14 يوماً فقط.
+                        </div>
+                    {% endif %}
                 </div>
 
                 {% if followups %}
@@ -546,7 +550,9 @@
                                                 <a href="{% url 'consultations:followup_detail' item.id %}" class="btn-outline-main">عرض</a>
 
                                                 {% if item.is_followup_allowed %}
-                                                    <a href="{% url 'consultations:followup_edit' item.id %}" class="btn-soft">تعديل</a>
+                                                    {% if request.user == item.patient or request.user.is_staff %}
+                                                        <a href="{% url 'consultations:followup_edit' item.id %}" class="btn-soft">تعديل</a>
+                                                    {% endif %}
                                                 {% endif %}
                                             </div>
                                         </td>
