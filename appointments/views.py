@@ -59,7 +59,9 @@ def _get_first_doctor_message(appointment):
     )
 
 
-# 🔥 أهم تعديل في المشروع
+# ================================
+# 🔥 إدارة توقيت الشات + إغلاق تلقائي
+# ================================
 def _get_chat_timing_data(appointment):
     now = timezone.now()
 
@@ -70,7 +72,7 @@ def _get_chat_timing_data(appointment):
         chat_closed = now > expires_at
         remaining_seconds = max(int((expires_at - now).total_seconds()), 0)
 
-        # ✅ إنهاء الجلسة تلقائياً
+        # ✅ إغلاق الجلسة تلقائياً
         if chat_closed and appointment.session_status != "completed":
             appointment.session_status = "completed"
             appointment.save(update_fields=["session_status"])
@@ -92,7 +94,6 @@ def _get_chat_timing_data(appointment):
         chat_closed = now > expires_at
         remaining_seconds = max(int((expires_at - now).total_seconds()), 0)
 
-        # ✅ إنهاء الجلسة تلقائياً
         if chat_closed and appointment.session_status != "completed":
             appointment.session_status = "completed"
             appointment.save(update_fields=["session_status"])
@@ -142,6 +143,9 @@ def _can_user_send_message(user, appointment):
     return True, ""
 
 
+# ================================
+# 💬 WebSocket Chat
+# ================================
 class AppointmentChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
@@ -221,7 +225,12 @@ class AppointmentChatConsumer(AsyncWebsocketConsumer):
             "sender": self.user.username,
             "sender_type": sender_type,
         }
-        @login_required
+
+
+# ================================
+# 📋 قائمة الحجوزات (تم إصلاحها)
+# ================================
+@login_required
 def appointment_list(request):
     appointments = Appointment.objects.select_related("doctor", "patient")
 
