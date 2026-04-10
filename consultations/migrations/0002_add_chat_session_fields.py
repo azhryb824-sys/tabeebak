@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("appointments", "0001_initial"),
+        ("appointments", "__first__"),
     ]
 
     operations = [
