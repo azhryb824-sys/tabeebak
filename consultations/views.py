@@ -4,8 +4,12 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from appointments.models import Appointment
-from .forms import FollowUpForm
+from .forms import FollowUpAttachmentForm, FollowUpForm
 from .models import FollowUp
+
+
+def _is_admin_user(user):
+    return getattr(user, "user_type", "") == "admin" or user.is_staff
 
 
 def followup_list(request):
@@ -40,15 +44,24 @@ def followup_list(request):
     if date:
         followups_qs = followups_qs.filter(followup_date=date)
 
+    if not _is_admin_user(request.user):
+        # المريض يرى متابعاته فقط، والطبيب يرى المتابعات المرتبطة به
+        doctor = getattr(request.user, "doctor_profile", None)
+        if doctor:
+            followups_qs = followups_qs.filter(doctor=doctor)
+        else:
+            followups_qs = followups_qs.filter(patient=request.user)
+
     paginator = Paginator(followups_qs, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
+    stats_base_qs = followups_qs
     stats = {
-        "total": FollowUp.objects.count(),
-        "scheduled": FollowUp.objects.filter(status="scheduled").count(),
-        "completed": FollowUp.objects.filter(status="completed").count(),
-        "cancelled": FollowUp.objects.filter(status="cancelled").count(),
+        "total": stats_base_qs.count(),
+        "scheduled": stats_base_qs.filter(status="scheduled").count(),
+        "completed": stats_base_qs.filter(status="completed").count(),
+        "cancelled": stats_base_qs.filter(status="cancelled").count(),
     }
 
     context = {
@@ -65,9 +78,21 @@ def followup_list(request):
 
 def followup_detail(request, pk):
     followup = get_object_or_404(
-        FollowUp.objects.select_related("appointment", "patient", "doctor"),
+        FollowUp.objects.select_related("appointment", "patient", "doctor").prefetch_related("attachments"),
         pk=pk
     )
+
+    is_admin = _is_admin_user(request.user)
+    is_patient_owner = followup.patient_id == request.user.id
+    is_doctor_owner = getattr(followup.doctor, "user_id", None) == request.user.id
+
+    if not (is_admin or is_patient_owner or is_doctor_owner):
+        messages.error(request, "ليس لديك صلاحية للوصول إلى هذه المتابعة.")
+        return redirect("consultations:followup_list")
+
+    attachment_form = None
+    if followup.is_followup_allowed:
+        attachment_form = FollowUpAttachmentForm()
 
     context = {
         "followup": followup,
@@ -75,14 +100,13 @@ def followup_detail(request, pk):
         "is_followup_allowed": followup.is_followup_allowed,
         "requires_new_consultation": followup.requires_new_consultation,
         "days_remaining": followup.days_remaining_for_followup,
+        "attachment_form": attachment_form,
     }
     return render(request, "consultations/followup_detail.html", context)
 
 
 def followup_create(request):
     if request.method == "POST":
-        form = FollowUpForm(request.POST)
-
         appointment_id = request.POST.get("appointment")
         selected_appointment = None
 
@@ -95,31 +119,70 @@ def followup_create(request):
             except Appointment.DoesNotExist:
                 selected_appointment = None
 
-        # 🔴 تحقق من صلاحية المتابعة
-        if selected_appointment and not FollowUp.can_create_for_appointment(selected_appointment):
+        if not selected_appointment:
+            messages.error(request, "الاستشارة الأصلية غير موجودة.")
+            return redirect("consultations:followup_list")
+
+        # المتابعة للمريض فقط
+        if selected_appointment.patient_id != request.user.id and not _is_admin_user(request.user):
+            messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
+            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
+
+        # لازم الاستشارة تكون مكتملة
+        if selected_appointment.session_status != "completed":
+            messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
+            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
+
+        # منع المتابعة بعد 14 يوم
+        if not FollowUp.can_create_for_appointment(selected_appointment):
             messages.error(
                 request,
-                "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد حجز استشارة جديدة."
+                "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد طلب استشارة جديدة."
             )
-            return redirect("consultations:followup_list")
+            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
+
+        form = FollowUpForm(
+            request.POST,
+            request_user=request.user,
+            is_patient_edit=(selected_appointment.patient_id == request.user.id and not _is_admin_user(request.user))
+        )
+        attachment_form = FollowUpAttachmentForm(request.POST, request.FILES)
 
         if form.is_valid():
             followup = form.save()
 
-            # 🔥 أهم تعديل: إعادة فتح الشات
+            # إعادة فتح نفس الشات: المريض ينتظر والطبيب يبدأ من جديد
             followup.appointment.reset_chat_session()
 
-            messages.success(request, "تم إنشاء المتابعة الطبية بنجاح وفتح المحادثة من جديد.")
+            # المرفق اختياري
+            if request.FILES.get("file"):
+                if attachment_form.is_valid():
+                    attachment = attachment_form.save(
+                        commit=False
+                    )
+                    attachment.followup = followup
+                    attachment.uploaded_by = request.user
+                    attachment.save()
+                else:
+                    # المتابعة محفوظة لكن المرفق فيه مشكلة
+                    messages.warning(
+                        request,
+                        "تم إنشاء المتابعة، لكن تعذر رفع المرفق. يرجى مراجعة نوع الملف أو حجمه."
+                    )
+                    return redirect("consultations:followup_detail", pk=followup.pk)
+
+            messages.success(request, "تم إنشاء المتابعة الطبية بنجاح وإعادة تفعيل المحادثة.")
             return redirect("consultations:followup_detail", pk=followup.pk)
 
         messages.error(request, "تعذر حفظ المتابعة. يرجى مراجعة البيانات المدخلة.")
 
         context = {
             "form": form,
+            "attachment_form": attachment_form,
             "page_title_dynamic": "إنشاء متابعة طبية",
             "selected_appointment": selected_appointment,
-            "deadline": FollowUp.get_followup_deadline_for_appointment(selected_appointment) if selected_appointment else None,
-            "is_followup_allowed": FollowUp.can_create_for_appointment(selected_appointment) if selected_appointment else None,
+            "deadline": FollowUp.get_followup_deadline_for_appointment(selected_appointment),
+            "is_followup_allowed": FollowUp.can_create_for_appointment(selected_appointment),
         }
         return render(request, "consultations/followup_form.html", context)
 
@@ -135,27 +198,46 @@ def followup_create(request):
             pk=appointment_id
         )
 
+        # المتابعة للمريض فقط
+        if selected_appointment.patient_id != request.user.id and not _is_admin_user(request.user):
+            messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
+            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
+
+        # لازم الاستشارة تكون مكتملة
+        if selected_appointment.session_status != "completed":
+            messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
+            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
+
         is_followup_allowed = FollowUp.can_create_for_appointment(selected_appointment)
         deadline = FollowUp.get_followup_deadline_for_appointment(selected_appointment)
 
         if not is_followup_allowed:
             messages.error(
                 request,
-                "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد حجز استشارة جديدة."
+                "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد طلب استشارة جديدة."
             )
-            return redirect("consultations:followup_list")
+            return redirect("appointment_detail", appointment_id=selected_appointment.pk)
 
         initial_data = {
             "appointment": selected_appointment,
             "patient": selected_appointment.patient,
             "doctor": selected_appointment.doctor,
             "method": selected_appointment.consultation_type,
+            "status": "scheduled",
+            "followup_date": selected_appointment.appointment_date,
+            "followup_time": selected_appointment.appointment_time,
         }
 
-    form = FollowUpForm(initial=initial_data)
+    form = FollowUpForm(
+        initial=initial_data,
+        request_user=request.user,
+        is_patient_edit=True
+    )
+    attachment_form = FollowUpAttachmentForm()
 
     context = {
         "form": form,
+        "attachment_form": attachment_form,
         "page_title_dynamic": "إنشاء متابعة طبية",
         "selected_appointment": selected_appointment,
         "deadline": deadline,
@@ -170,32 +252,57 @@ def followup_edit(request, pk):
         pk=pk
     )
 
+    is_admin = _is_admin_user(request.user)
+
+    # فقط المريض صاحب المتابعة أو الأدمن يقدر يعدل
+    if not is_admin and request.user != followup.patient:
+        messages.error(request, "ليس لديك صلاحية لتعديل بيانات هذه المتابعة.")
+        return redirect("consultations:followup_detail", pk=followup.pk)
+
     if not FollowUp.can_create_for_appointment(followup.appointment):
         messages.error(
             request,
-            "انتهت مدة المتابعة المرتبطة بهذه الاستشارة، ويجب حجز استشارة جديدة."
+            "انتهت مدة المتابعة المرتبطة بهذه الاستشارة، ويجب طلب استشارة جديدة."
         )
         return redirect("consultations:followup_detail", pk=followup.pk)
 
     if request.method == "POST":
-        form = FollowUpForm(request.POST, instance=followup)
+        form = FollowUpForm(
+            request.POST,
+            instance=followup,
+            request_user=request.user,
+            is_patient_edit=not is_admin
+        )
+
+        # منع تعديل حقول الربط حتى من المريض
+        for field_name in ["appointment", "patient", "doctor"]:
+            if field_name in form.fields:
+                form.fields[field_name].disabled = True
 
         if form.is_valid():
             updated_followup = form.save()
-
-            # 🔥 إعادة فتح الشات عند التعديل أيضاً (اختياري لكن احترافي)
-            updated_followup.appointment.reset_chat_session()
-
-            messages.success(request, "تم تعديل المتابعة الطبية وإعادة فتح المحادثة.")
+            messages.success(request, "تم تعديل المتابعة الطبية بنجاح.")
             return redirect("consultations:followup_detail", pk=updated_followup.pk)
 
         messages.error(request, "تعذر تعديل المتابعة. يرجى مراجعة البيانات المدخلة.")
     else:
-        form = FollowUpForm(instance=followup)
+        form = FollowUpForm(
+            instance=followup,
+            request_user=request.user,
+            is_patient_edit=not is_admin
+        )
+        for field_name in ["appointment", "patient", "doctor"]:
+            if field_name in form.fields:
+                form.fields[field_name].disabled = True
+
+    attachment_form = None
+    if followup.is_followup_allowed:
+        attachment_form = FollowUpAttachmentForm()
 
     context = {
         "form": form,
         "followup": followup,
+        "attachment_form": attachment_form,
         "page_title_dynamic": "تعديل المتابعة الطبية",
         "selected_appointment": followup.appointment,
         "deadline": FollowUp.get_followup_deadline_for_appointment(followup.appointment),
@@ -210,11 +317,55 @@ def followup_create_from_appointment(request, appointment_id):
         pk=appointment_id
     )
 
+    # المتابعة للمريض فقط
+    if appointment.patient_id != request.user.id and not _is_admin_user(request.user):
+        messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
+        return redirect("appointment_detail", appointment_id=appointment.pk)
+
+    # لازم الاستشارة تكون مكتملة
+    if appointment.session_status != "completed":
+        messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
+        return redirect("appointment_detail", appointment_id=appointment.pk)
+
     if not FollowUp.can_create_for_appointment(appointment):
         messages.error(
             request,
-            "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد حجز استشارة جديدة."
+            "انتهت مدة المتابعة لهذه الاستشارة، ولا يمكن إنشاء متابعة إلا بعد طلب استشارة جديدة."
         )
-        return redirect("appointments:doctor_appointment_detail", pk=appointment.pk)
+        return redirect("appointment_detail", appointment_id=appointment.pk)
 
     return redirect(f"/consultations/followups/create/?appointment={appointment.pk}")
+
+
+def upload_followup_attachment(request, pk):
+    followup = get_object_or_404(
+        FollowUp.objects.select_related("appointment", "patient", "doctor"),
+        pk=pk
+    )
+
+    is_admin = _is_admin_user(request.user)
+    is_patient_owner = followup.patient_id == request.user.id
+    is_doctor_owner = getattr(followup.doctor, "user_id", None) == request.user.id
+
+    if not (is_admin or is_patient_owner or is_doctor_owner):
+        messages.error(request, "ليس لديك صلاحية لرفع مرفق لهذه المتابعة.")
+        return redirect("consultations:followup_detail", pk=followup.pk)
+
+    if not followup.is_followup_allowed:
+        messages.error(request, "انتهت صلاحية هذه المتابعة، ولا يمكن رفع مرفقات جديدة عليها.")
+        return redirect("consultations:followup_detail", pk=followup.pk)
+
+    if request.method == "POST":
+        form = FollowUpAttachmentForm(
+            request.POST,
+            request.FILES,
+            followup=followup,
+            uploaded_by=request.user
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "تم رفع المرفق الطبي بنجاح.")
+        else:
+            messages.error(request, "تعذر رفع المرفق. تأكد من نوع الملف وحجمه.")
+
+    return redirect("consultations:followup_detail", pk=followup.pk)
