@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,6 +20,10 @@ def _validate_followup_creation_access(request, appointment):
     يرجع None إذا كل شيء صحيح.
     ويرجع redirect response إذا يوجد سبب يمنع الإنشاء.
     """
+
+    if not appointment:
+        messages.error(request, "الاستشارة الأصلية غير موجودة.")
+        return redirect("consultations:followup_list")
 
     # المتابعة للمريض فقط
     if appointment.patient_id != request.user.id and not _is_admin_user(request.user):
@@ -41,6 +46,7 @@ def _validate_followup_creation_access(request, appointment):
     return None
 
 
+@login_required
 def followup_list(request):
     followups_qs = FollowUp.objects.select_related(
         "appointment",
@@ -105,6 +111,7 @@ def followup_list(request):
     return render(request, "consultations/followup_list.html", context)
 
 
+@login_required
 def followup_detail(request, pk):
     followup = get_object_or_404(
         FollowUp.objects.select_related("appointment", "patient", "doctor").prefetch_related("attachments"),
@@ -123,6 +130,8 @@ def followup_detail(request, pk):
     if followup.is_followup_allowed:
         attachment_form = FollowUpAttachmentForm()
 
+    appointment_exists = bool(getattr(followup, "appointment", None))
+
     context = {
         "followup": followup,
         "deadline": followup.followup_deadline,
@@ -130,10 +139,12 @@ def followup_detail(request, pk):
         "requires_new_consultation": followup.requires_new_consultation,
         "days_remaining": followup.days_remaining_for_followup,
         "attachment_form": attachment_form,
+        "appointment_exists": appointment_exists,
     }
     return render(request, "consultations/followup_detail.html", context)
 
 
+@login_required
 def followup_create(request):
     if request.method == "POST":
         appointment_id = request.POST.get("appointment")
@@ -167,7 +178,8 @@ def followup_create(request):
             followup = form.save()
 
             # إعادة فتح نفس الشات: المريض ينتظر والطبيب يبدأ من جديد
-            followup.appointment.reset_chat_session()
+            if getattr(followup, "appointment", None):
+                followup.appointment.reset_chat_session()
 
             # المرفق اختياري
             if request.FILES.get("file"):
@@ -250,6 +262,7 @@ def followup_create(request):
     return render(request, "consultations/followup_form.html", context)
 
 
+@login_required
 def followup_edit(request, pk):
     followup = get_object_or_404(
         FollowUp.objects.select_related("appointment", "patient", "doctor"),
@@ -261,6 +274,10 @@ def followup_edit(request, pk):
     # فقط المريض صاحب المتابعة أو الأدمن يقدر يعدل
     if not is_admin and request.user != followup.patient:
         messages.error(request, "ليس لديك صلاحية لتعديل بيانات هذه المتابعة.")
+        return redirect("consultations:followup_detail", pk=followup.pk)
+
+    if not getattr(followup, "appointment", None):
+        messages.error(request, "الاستشارة الأصلية غير موجودة.")
         return redirect("consultations:followup_detail", pk=followup.pk)
 
     if followup.appointment.session_status != "completed":
@@ -319,6 +336,7 @@ def followup_edit(request, pk):
     return render(request, "consultations/followup_form.html", context)
 
 
+@login_required
 def followup_create_from_appointment(request, appointment_id):
     appointment = get_object_or_404(
         Appointment.objects.select_related("patient", "doctor"),
@@ -332,6 +350,7 @@ def followup_create_from_appointment(request, appointment_id):
     return redirect(f"/consultations/followups/create/?appointment={appointment.pk}")
 
 
+@login_required
 def upload_followup_attachment(request, pk):
     followup = get_object_or_404(
         FollowUp.objects.select_related("appointment", "patient", "doctor"),
