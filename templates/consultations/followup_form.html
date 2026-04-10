@@ -1,0 +1,210 @@
+{% extends "core/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title_dynamic }}{% endblock %}
+{% block page_title %}{{ page_title_dynamic }}{% endblock %}
+{% block page_subtitle %}إدخال بيانات المتابعة الطبية وربطها بالاستشارة الأصلية{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="panel-card">
+    <div class="panel-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h4 class="mb-1">{{ page_title_dynamic }}</h4>
+            <p class="text-muted mb-0">يرجى مراجعة بيانات المتابعة قبل الحفظ</p>
+        </div>
+
+        <a href="{% url 'consultations:followup_list' %}" class="btn btn-outline-secondary">
+            رجوع إلى المتابعات
+        </a>
+    </div>
+
+    <div class="panel-card-body">
+
+        {% if selected_appointment %}
+            <div class="alert alert-info rounded-4 mb-4">
+                <h6 class="fw-bold mb-3">بيانات الاستشارة الأصلية</h6>
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div><strong>المريض:</strong></div>
+                        <div>{{ selected_appointment.full_name }}</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div><strong>الطبيب:</strong></div>
+                        <div>{{ selected_appointment.doctor.name }}</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div><strong>تاريخ الاستشارة:</strong></div>
+                        <div>{{ selected_appointment.appointment_date }}</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div><strong>وقت الاستشارة:</strong></div>
+                        <div>{{ selected_appointment.appointment_time }}</div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if deadline %}
+            {% if is_followup_allowed %}
+                <div class="alert alert-success rounded-4 mb-4">
+                    <strong>المتابعة متاحة.</strong>
+                    آخر وقت مسموح للمتابعة لهذه الاستشارة هو:
+                    <strong>{{ deadline|date:"Y-m-d h:i A" }}</strong>
+                </div>
+            {% else %}
+                <div class="alert alert-danger rounded-4 mb-4">
+                    <strong>انتهت مدة المتابعة لهذه الاستشارة.</strong>
+                    لا يمكن إنشاء أو تعديل متابعة بعد مرور 14 يوماً من الاستشارة، ويجب حجز استشارة جديدة.
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger rounded-4">
+                {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" class="styled-form">
+            {% csrf_token %}
+
+            <div class="row g-4">
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">{{ form.appointment.label }}</label>
+                    {{ form.appointment }}
+                    {% if form.appointment.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.appointment.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">{{ form.patient.label }}</label>
+                    {{ form.patient }}
+                    {% if form.patient.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.patient.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">{{ form.doctor.label }}</label>
+                    {{ form.doctor }}
+                    {% if form.doctor.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.doctor.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">{{ form.method.label }}</label>
+                    {{ form.method }}
+                    {% if form.method.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.method.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">{{ form.status.label }}</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.status.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">{{ form.followup_date.label }}</label>
+                    {{ form.followup_date }}
+                    {% if form.followup_date.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.followup_date.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">{{ form.followup_time.label }}</label>
+                    {{ form.followup_time }}
+                    {% if form.followup_time.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.followup_time.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">{{ form.patient_note.label }}</label>
+                    {{ form.patient_note }}
+                    {% if form.patient_note.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.patient_note.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">{{ form.doctor_note.label }}</label>
+                    {{ form.doctor_note }}
+                    {% if form.doctor_note.errors %}
+                        <div class="text-danger small mt-2">
+                            {% for error in form.doctor_note.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap mt-4">
+                {% if is_followup_allowed == False %}
+                    <button type="button" class="btn btn-secondary" disabled>
+                        لا يمكن الحفظ
+                    </button>
+                {% else %}
+                    <button type="submit" class="btn btn-main">
+                        حفظ المتابعة
+                    </button>
+                {% endif %}
+
+                <a href="{% url 'consultations:followup_list' %}" class="btn btn-outline-secondary">
+                    إلغاء
+                </a>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}
