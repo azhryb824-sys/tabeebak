@@ -163,6 +163,91 @@
         min-height:110px;
     }
 
+    .attachments-list{
+        display:flex;
+        flex-direction:column;
+        gap:12px;
+    }
+
+    .attachment-item{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:14px;
+        padding:16px;
+        background:#f8fbfd;
+        border:1px solid var(--border);
+        border-radius:18px;
+    }
+
+    .attachment-meta{
+        display:flex;
+        flex-direction:column;
+        gap:4px;
+    }
+
+    .attachment-title{
+        color:var(--primary-dark);
+        font-weight:800;
+    }
+
+    .attachment-sub{
+        color:var(--muted);
+        font-size:.92rem;
+    }
+
+    .upload-box{
+        margin-top:16px;
+        padding:18px;
+        background:#f8fbfd;
+        border:1px dashed #cbd5e1;
+        border-radius:20px;
+    }
+
+    .upload-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr auto;
+        gap:14px;
+        align-items:end;
+    }
+
+    .form-label{
+        font-weight:800;
+        color:var(--primary-dark);
+        margin-bottom:8px;
+        display:block;
+    }
+
+    .form-control,
+    input,
+    textarea,
+    select{
+        width:100%;
+        border-radius:16px;
+        border:1px solid var(--border);
+        padding:12px 14px;
+        box-shadow:none !important;
+        background:#fff;
+    }
+
+    .help-text{
+        color:var(--muted);
+        font-size:.9rem;
+        margin-top:6px;
+    }
+
+    .error-list{
+        margin-top:8px;
+        color:var(--danger);
+        font-size:.92rem;
+        font-weight:700;
+    }
+
+    .error-list ul{
+        margin:0;
+        padding-right:18px;
+    }
+
     .actions{
         display:flex;
         gap:12px;
@@ -204,15 +289,22 @@
             padding-top:105px;
         }
 
-        .info-grid{
+        .info-grid,
+        .upload-grid{
             grid-template-columns:1fr;
+        }
+
+        .attachment-item{
+            flex-direction:column;
+            align-items:flex-start;
         }
 
         .actions{
             flex-direction:column;
         }
 
-        .actions a{
+        .actions a,
+        .actions button{
             width:100%;
             text-align:center;
         }
@@ -229,7 +321,7 @@
 
             {% if requires_new_consultation %}
                 <div class="notice-box notice-danger">
-                    انتهت مدة المتابعة لهذه الاستشارة، ويجب حجز استشارة جديدة لإجراء متابعة جديدة.
+                    انتهت مدة المتابعة لهذه الاستشارة، ويجب طلب استشارة جديدة لإجراء متابعة جديدة.
                 </div>
             {% else %}
                 <div class="notice-box notice-success">
@@ -356,9 +448,74 @@
                 </div>
             </div>
 
+            <div class="section-box">
+                <div class="section-title">مرفقات المتابعة</div>
+
+                {% if followup.attachments.all %}
+                    <div class="attachments-list">
+                        {% for attachment in followup.attachments.all %}
+                            <div class="attachment-item">
+                                <div class="attachment-meta">
+                                    <div class="attachment-title">
+                                        {{ attachment.title|default:attachment.filename }}
+                                    </div>
+                                    <div class="attachment-sub">
+                                        تم الرفع بتاريخ {{ attachment.created_at|date:"Y-m-d h:i A" }}
+                                        {% if attachment.uploaded_by %}
+                                            بواسطة {{ attachment.uploaded_by.get_full_name|default:attachment.uploaded_by.username }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <a href="{{ attachment.file.url }}" target="_blank" class="btn-outline-main">
+                                    فتح الملف
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="note-box">لا توجد مرفقات مضافة لهذه المتابعة.</div>
+                {% endif %}
+
+                {% if attachment_form and followup.is_followup_allowed %}
+                    <div class="upload-box">
+                        <form method="post" action="{% url 'consultations:upload_followup_attachment' followup.id %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <div class="upload-grid">
+                                <div>
+                                    <label class="form-label">{{ attachment_form.title.label }}</label>
+                                    {{ attachment_form.title }}
+                                    {% if attachment_form.title.errors %}
+                                        <div class="error-list">{{ attachment_form.title.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label class="form-label">{{ attachment_form.file.label }}</label>
+                                    {{ attachment_form.file }}
+                                    {% if attachment_form.file.errors %}
+                                        <div class="error-list">{{ attachment_form.file.errors }}</div>
+                                    {% endif %}
+                                    <div class="help-text">
+                                        يمكنك رفع صورة أو تقرير أو مستند طبي بشكل اختياري.
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <button type="submit" class="btn-main">رفع المرفق</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+
             <div class="actions">
                 {% if followup.is_followup_allowed %}
-                    <a href="{% url 'consultations:followup_edit' followup.id %}" class="btn-main">تعديل المتابعة</a>
+                    {% if request.user == followup.patient or request.user.is_staff %}
+                        <a href="{% url 'consultations:followup_edit' followup.id %}" class="btn-main">تعديل المتابعة</a>
+                    {% endif %}
                 {% endif %}
 
                 <a href="{% url 'consultations:followup_list' %}" class="btn-outline-main">العودة إلى القائمة</a>
