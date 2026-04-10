@@ -95,6 +95,7 @@ def followup_create(request):
             except Appointment.DoesNotExist:
                 selected_appointment = None
 
+        # 🔴 تحقق من صلاحية المتابعة
         if selected_appointment and not FollowUp.can_create_for_appointment(selected_appointment):
             messages.error(
                 request,
@@ -104,7 +105,11 @@ def followup_create(request):
 
         if form.is_valid():
             followup = form.save()
-            messages.success(request, "تم إنشاء المتابعة الطبية بنجاح.")
+
+            # 🔥 أهم تعديل: إعادة فتح الشات
+            followup.appointment.reset_chat_session()
+
+            messages.success(request, "تم إنشاء المتابعة الطبية بنجاح وفتح المحادثة من جديد.")
             return redirect("consultations:followup_detail", pk=followup.pk)
 
         messages.error(request, "تعذر حفظ المتابعة. يرجى مراجعة البيانات المدخلة.")
@@ -177,7 +182,11 @@ def followup_edit(request, pk):
 
         if form.is_valid():
             updated_followup = form.save()
-            messages.success(request, "تم تعديل المتابعة الطبية بنجاح.")
+
+            # 🔥 إعادة فتح الشات عند التعديل أيضاً (اختياري لكن احترافي)
+            updated_followup.appointment.reset_chat_session()
+
+            messages.success(request, "تم تعديل المتابعة الطبية وإعادة فتح المحادثة.")
             return redirect("consultations:followup_detail", pk=updated_followup.pk)
 
         messages.error(request, "تعذر تعديل المتابعة. يرجى مراجعة البيانات المدخلة.")
