@@ -25,17 +25,14 @@ def _validate_followup_creation_access(request, appointment):
         messages.error(request, "الاستشارة الأصلية غير موجودة.")
         return redirect("consultations:followup_list")
 
-    # المتابعة للمريض فقط
     if appointment.patient_id != request.user.id and not _is_admin_user(request.user):
         messages.error(request, "المتابعة الطبية متاحة للمريض صاحب الاستشارة فقط.")
         return redirect("appointment_detail", appointment_id=appointment.pk)
 
-    # لازم الاستشارة تكون مكتملة
-    if appointment.session_status != "completed":
+    if appointment.status != "completed":
         messages.error(request, "لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.")
         return redirect("appointment_detail", appointment_id=appointment.pk)
 
-    # منع المتابعة بعد 14 يوم
     if not FollowUp.can_create_for_appointment(appointment):
         messages.error(
             request,
@@ -80,7 +77,6 @@ def followup_list(request):
         followups_qs = followups_qs.filter(followup_date=date)
 
     if not _is_admin_user(request.user):
-        # المريض يرى متابعاته فقط، والطبيب يرى المتابعات المرتبطة به
         doctor = getattr(request.user, "doctor_profile", None)
         if doctor:
             followups_qs = followups_qs.filter(doctor=doctor)
@@ -177,11 +173,9 @@ def followup_create(request):
         if form.is_valid():
             followup = form.save()
 
-            # إعادة فتح نفس الشات: المريض ينتظر والطبيب يبدأ من جديد
             if getattr(followup, "appointment", None):
                 followup.appointment.reset_chat_session()
 
-            # المرفق اختياري
             if request.FILES.get("file"):
                 if attachment_form.is_valid():
                     attachment = attachment_form.save(commit=False)
@@ -229,9 +223,6 @@ def followup_create(request):
         is_followup_allowed = FollowUp.can_create_for_appointment(selected_appointment)
         deadline = FollowUp.get_followup_deadline_for_appointment(selected_appointment)
 
-        # مهم:
-        # لا نستخدم تاريخ الاستشارة الأصلية هنا، لأن الفورم يمنع تاريخاً أقدم من اليوم.
-        # نبدأ بتاريخ اليوم ووقت الآن حتى لا تُرفض المتابعة من غير سبب.
         now_local = timezone.localtime()
 
         initial_data = {
@@ -271,7 +262,6 @@ def followup_edit(request, pk):
 
     is_admin = _is_admin_user(request.user)
 
-    # فقط المريض صاحب المتابعة أو الأدمن يقدر يعدل
     if not is_admin and request.user != followup.patient:
         messages.error(request, "ليس لديك صلاحية لتعديل بيانات هذه المتابعة.")
         return redirect("consultations:followup_detail", pk=followup.pk)
@@ -280,7 +270,7 @@ def followup_edit(request, pk):
         messages.error(request, "الاستشارة الأصلية غير موجودة.")
         return redirect("consultations:followup_detail", pk=followup.pk)
 
-    if followup.appointment.session_status != "completed":
+    if followup.appointment.status != "completed":
         messages.error(request, "لا يمكن تعديل المتابعة قبل اكتمال الاستشارة الأصلية.")
         return redirect("consultations:followup_detail", pk=followup.pk)
 
@@ -299,7 +289,6 @@ def followup_edit(request, pk):
             is_patient_edit=not is_admin
         )
 
-        # منع تعديل حقول الربط حتى من المريض
         for field_name in ["appointment", "patient", "doctor"]:
             if field_name in form.fields:
                 form.fields[field_name].disabled = True
