@@ -1,0 +1,190 @@
+{% extends "core/dashboard_base.html" %}
+{% load static %}
+
+{% block title %}تفاصيل المتابعة الطبية{% endblock %}
+{% block page_title %}تفاصيل المتابعة الطبية{% endblock %}
+{% block page_subtitle %}عرض كامل لبيانات المتابعة وحالة صلاحيتها{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="panel-card">
+    <div class="panel-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h4 class="mb-1">تفاصيل المتابعة #{{ followup.id }}</h4>
+            <p class="text-muted mb-0">معلومات المتابعة المرتبطة بالاستشارة الأصلية</p>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            {% if is_followup_allowed %}
+                <a href="{% url 'consultations:followup_edit' followup.id %}" class="btn btn-main">
+                    تعديل المتابعة
+                </a>
+            {% endif %}
+
+            <a href="{% url 'consultations:followup_list' %}" class="btn btn-outline-secondary">
+                رجوع
+            </a>
+        </div>
+    </div>
+
+    <div class="panel-card-body">
+
+        {% if requires_new_consultation %}
+            <div class="alert alert-danger rounded-4 mb-4">
+                <strong>انتهت مدة المتابعة لهذه الاستشارة.</strong>
+                لا يمكن إجراء متابعة جديدة بعد مرور 14 يوماً من وقت الاستشارة الأصلية، ويجب حجز استشارة جديدة.
+            </div>
+        {% else %}
+            <div class="alert alert-success rounded-4 mb-4">
+                <strong>المتابعة ما زالت ضمن المدة المسموح بها.</strong>
+                {% if deadline %}
+                    آخر وقت مسموح للمتابعة:
+                    <strong>{{ deadline|date:"Y-m-d h:i A" }}</strong>
+                {% endif %}
+                {% if days_remaining %}
+                    <div class="mt-2">
+                        الأيام المتبقية: <strong>{{ days_remaining }}</strong>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <div class="row g-4">
+
+            <div class="col-md-6">
+                <div class="border rounded-4 p-3 h-100 bg-light">
+                    <h6 class="fw-bold mb-3">بيانات الاستشارة الأصلية</h6>
+
+                    <div class="mb-2">
+                        <strong>اسم المريض:</strong>
+                        <div>{{ followup.appointment.full_name }}</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>الجوال:</strong>
+                        <div>{{ followup.appointment.phone }}</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>البريد الإلكتروني:</strong>
+                        <div>{{ followup.appointment.email|default:"—" }}</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>نوع الاستشارة الأصلية:</strong>
+                        <div>{{ followup.appointment.get_consultation_type_display }}</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>تاريخ الاستشارة:</strong>
+                        <div>{{ followup.appointment.appointment_date }}</div>
+                    </div>
+
+                    <div class="mb-0">
+                        <strong>وقت الاستشارة:</strong>
+                        <div>{{ followup.appointment.appointment_time }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="border rounded-4 p-3 h-100 bg-light">
+                    <h6 class="fw-bold mb-3">بيانات المتابعة</h6>
+
+                    <div class="mb-2">
+                        <strong>الطبيب:</strong>
+                        <div>{{ followup.doctor.name }}</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>المريض المرتبط بالحساب:</strong>
+                        <div>{{ followup.patient.get_full_name|default:followup.patient.username }}</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>نوع المتابعة:</strong>
+                        <div>{{ followup.get_method_display }}</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>الحالة:</strong>
+                        <div>
+                            {% if followup.status == "completed" %}
+                                <span class="badge bg-success">مكتملة</span>
+                            {% elif followup.status == "scheduled" %}
+                                <span class="badge bg-primary">مجدولة</span>
+                            {% else %}
+                                <span class="badge bg-danger">ملغية</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>تاريخ المتابعة:</strong>
+                        <div>{{ followup.followup_date }}</div>
+                    </div>
+
+                    <div class="mb-0">
+                        <strong>وقت المتابعة:</strong>
+                        <div>{{ followup.followup_time }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="border rounded-4 p-3 h-100">
+                    <h6 class="fw-bold mb-3">ملاحظات المريض</h6>
+                    {% if followup.patient_note %}
+                        <div style="white-space: pre-line;">{{ followup.patient_note }}</div>
+                    {% else %}
+                        <div class="text-muted">لا توجد ملاحظات من المريض.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="border rounded-4 p-3 h-100">
+                    <h6 class="fw-bold mb-3">ملاحظات الطبيب</h6>
+                    {% if followup.doctor_note %}
+                        <div style="white-space: pre-line;">{{ followup.doctor_note }}</div>
+                    {% else %}
+                        <div class="text-muted">لا توجد ملاحظات من الطبيب.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <div class="border rounded-4 p-3 bg-light">
+                    <h6 class="fw-bold mb-3">معلومات النظام</h6>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <strong>تاريخ إنشاء المتابعة:</strong>
+                            <div>{{ followup.created_at|date:"Y-m-d h:i A" }}</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <strong>آخر تحديث:</strong>
+                            <div>{{ followup.updated_at|date:"Y-m-d h:i A" }}</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <strong>آخر موعد مسموح للمتابعة:</strong>
+                            <div>
+                                {% if deadline %}
+                                    {{ deadline|date:"Y-m-d h:i A" }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
