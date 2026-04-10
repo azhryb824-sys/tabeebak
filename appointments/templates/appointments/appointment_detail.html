@@ -460,26 +460,36 @@
                 <div class="followup-header">
                     <h4 class="mb-0">المتابعات الطبية</h4>
 
-                    {% if can_create_followup %}
-                        <a href="{% url 'consultations:followup_create_from_appointment' appointment.id %}" class="btn btn-main">
-                            ➕ إنشاء متابعة
-                        </a>
+                    {% if request.user == appointment.patient %}
+                        {% if appointment.session_status == "completed" and can_create_followup %}
+                            <a href="{% url 'consultations:followup_create_from_appointment' appointment.id %}" class="btn btn-main">
+                                ➕ إنشاء متابعة
+                            </a>
+                        {% endif %}
                     {% endif %}
                 </div>
 
-                {% if can_create_followup %}
-                    <div class="notice-box notice-confirmed">
-                        يمكنك إنشاء متابعة لهذه الاستشارة.
-                        {% if followup_deadline %}
-                            <br>
-                            آخر وقت مسموح:
-                            <strong>{{ followup_deadline|date:"Y-m-d h:i A" }}</strong>
+                {% if request.user == appointment.patient %}
+                    {% if appointment.session_status != "completed" %}
+                        <div class="notice-box notice-pending">
+                            لا يمكن إنشاء متابعة قبل اكتمال الاستشارة الأصلية.
+                        </div>
+                    {% else %}
+                        {% if can_create_followup %}
+                            <div class="notice-box notice-confirmed">
+                                يمكنك إنشاء متابعة لهذه الاستشارة.
+                                {% if followup_deadline %}
+                                    <br>
+                                    آخر وقت مسموح:
+                                    <strong>{{ followup_deadline|date:"Y-m-d h:i A" }}</strong>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="notice-box notice-cancelled">
+                                انتهت مهلة المتابعة لهذه الاستشارة بعد مرور 14 يوماً، ويجب حجز استشارة جديدة.
+                            </div>
                         {% endif %}
-                    </div>
-                {% else %}
-                    <div class="notice-box notice-cancelled">
-                        انتهت مهلة المتابعة لهذه الاستشارة بعد مرور 14 يوماً، ويجب حجز استشارة جديدة.
-                    </div>
+                    {% endif %}
                 {% endif %}
 
                 {% if followups %}
@@ -518,10 +528,12 @@
                                     عرض
                                 </a>
 
-                                {% if followup.is_followup_allowed %}
-                                    <a href="{% url 'consultations:followup_edit' followup.id %}" class="btn btn-main">
-                                        تعديل
-                                    </a>
+                                {% if request.user == followup.patient %}
+                                    {% if followup.is_followup_allowed %}
+                                        <a href="{% url 'consultations:followup_edit' followup.id %}" class="btn btn-main">
+                                            تعديل
+                                        </a>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </div>
